@@ -1,0 +1,483 @@
+================================================================================
+SOUNDLAB - Mini-DAW Educațional Web App
+Arhitectura Completă - Blueprint Licență
+================================================================================
+
+1. STACK FINAL
+================================================================================
+
+FRONTEND:
+- React 18 + TypeScript + Vite
+- Zustand (state management)
+- TailwindCSS + Radix UI (design system)
+- react-knob-headless (knobs audio)
+- React Flow (synth lab - v2/future)
+
+VIZUALIZĂRI:
+- wavesurfer.js v7 (waveform display + regions)
+- audiomotion-analyzer (spectrum analyzer real-time)
+- Canvas 2D custom (spectrogram, meters, gain reduction)
+- SVG (curbe EQ, filter response)
+
+AUDIO ENGINE:
+- Rust → WebAssembly (DSP core - efecte, procesare)
+  - fundsp (synthesis, filters, effects DSP)
+  - rustfft / realfft (spectral analysis, FFT)
+  - dasp (sample format conversion, buffers)
+  - rubato (resampling)
+  - hound (WAV decode/encode)
+- Web Audio API (I/O, routing, AudioContext)
+- AudioWorklet (bridge JS ↔ WASM)
+- Tone.js (transport, scheduling, clock)
+
+PERSISTENȚĂ:
+- IndexedDB via idb (presets, audio files, snapshots)
+- localStorage (settings, UI preferences)
+
+AUDIO SAMPLES:
+- Freesound.org CC0 curated set (~20-30 samples)
+- Bundled în /public/samples/
+
+DEPLOY:
+- Cloudflare Pages (gratuit, unlimited bandwidth, WASM support)
+- COOP/COEP headers pentru SharedArrayBuffer
+
+
+2. FLUXUL DE DATE AUDIO
+================================================================================
+
+File Input (drag/drop) → Main Thread JS (decode audio) → AudioContext (Web Audio)
+                                                              │
+                                                              ▼
+                         ┌──────────────────────────────────────────┐
+                         │          AudioWorklet Thread              │
+                         │  ┌────────────────────────────────────┐  │
+                         │  │     WASM DSP Engine (Rust)          │  │
+                         │  │                                      │  │
+                         │  │  Input Buffer                        │  │
+                         │  │    ↓                                  │  │
+                         │  │  [Gate] → [EQ] → [Comp] → [Reverb]  │  │
+                         │  │    ↓                                  │  │
+                         │  │  Output Buffer                       │  │
+                         │  │    ↓                                  │  │
+                         │  │  Analysis Data (FFT, RMS, peaks)     │  │
+                         │  └────────────────────────────────────┘  │
+                         └──────────────┬───────────────────────────┘
+                                        │
+                              MessagePort (postMessage)
+                                        │
+                         ┌──────────────▼───────────────────────────┐
+                         │          Main Thread                      │
+                         │  Zustand Store → Canvas/wavesurfer/       │
+                         │                   audiomotion              │
+                         └──────────────────────────────────────────┘
+
+Comunicare Main Thread ↔ AudioWorklet ↔ WASM:
+- UI trimite parametri via port.postMessage()
+- AudioWorklet pasează la WASM via set_param()
+- WASM procesează 128 samples/frame
+- Analysis data trimisă înapoi la ~30fps (nu la sample rate)
+
+
+3. STRUCTURA DE FOLDERE
+================================================================================
+
+soundlab/
+├── public/
+│   ├── samples/                    # CC0 audio samples bundled
+│   │   ├── voice/
+│   │   ├── drums/
+│   │   ├── instruments/
+│   │   └── field-recordings/
+│   └── worklets/
+│       └── dsp-processor.js        # AudioWorklet processor (thin JS bridge)
+│
+├── src/
+│   ├── app/
+│   │   ├── App.tsx
+│   │   ├── Router.tsx
+│   │   └── pages/
+│   │       ├── Home.tsx             # Landing page
+│   │       ├── Workspace.tsx        # Main DAW workspace
+│   │       ├── Lessons.tsx          # Guided tutorials
+│   │       └── Presets.tsx          # Preset browser
+│   │
+│   ├── audio/
+│   │   ├── engine.ts               # AudioContext setup, WASM loader
+│   │   ├── worklet-bridge.ts       # MessagePort communication
+│   │   ├── transport.ts            # Tone.js transport wrapper
+│   │   ├── file-loader.ts          # Audio file decode/load
+│   │   ├── exporter.ts             # OfflineAudioContext → WAV export
+│   │   └── analyzer.ts             # AnalyserNode wrapper for viz
+│   │
+│   ├── components/
+│   │   ├── workspace/
+│   │   │   ├── EffectsRack.tsx      # Drag-reorder effects chain
+│   │   │   ├── EffectCard.tsx       # Single effect plugin card
+│   │   │   ├── TransportBar.tsx     # Play/stop/loop controls
+│   │   │   ├── FileDropZone.tsx     # Drag & drop upload
+│   │   │   └── MasterSection.tsx    # Output meters, master gain
+│   │   │
+│   │   ├── effects/
+│   │   │   ├── Compressor.tsx
+│   │   │   ├── ParametricEQ.tsx
+│   │   │   ├── Reverb.tsx
+│   │   │   ├── Delay.tsx
+│   │   │   ├── Gate.tsx
+│   │   │   ├── Limiter.tsx
+│   │   │   ├── NoiseReduction.tsx
+│   │   │   └── ...                  # Un component per efect
+│   │   │
+│   │   ├── controls/
+│   │   │   ├── Knob.tsx             # Rotary knob
+│   │   │   ├── Fader.tsx            # Vertical/horizontal slider
+│   │   │   ├── Toggle.tsx           # Bypass/enable switch
+│   │   │   ├── Select.tsx           # Dropdown for modes/types
+│   │   │   └── NumericInput.tsx     # Direct value entry
+│   │   │
+│   │   ├── visualization/
+│   │   │   ├── WaveformView.tsx     # wavesurfer.js wrapper
+│   │   │   ├── SpectrumAnalyzer.tsx # audiomotion-analyzer wrapper
+│   │   │   ├── Spectrogram.tsx      # Custom Canvas spectrogram
+│   │   │   ├── LevelMeter.tsx       # Peak + RMS meter
+│   │   │   ├── GainReductionMeter.tsx
+│   │   │   ├── StereoFieldView.tsx  # Goniometer / correlation
+│   │   │   ├── EQCurveDisplay.tsx   # SVG filter response
+│   │   │   └── EnvelopeDisplay.tsx  # Input vs output envelope
+│   │   │
+│   │   └── education/
+│   │       ├── InfoPanel.tsx        # Dynamic educational text
+│   │       ├── Tooltip.tsx          # Parameter hover explanation
+│   │       ├── RecommendationPanel.tsx
+│   │       ├── ABChallenge.tsx      # A/B listening quiz
+│   │       └── TutorialOverlay.tsx  # Step-by-step guide
+│   │
+│   ├── store/
+│   │   ├── effectsStore.ts          # Effect chain state, parameters
+│   │   ├── audioStore.ts            # Playback state, loaded file
+│   │   ├── analysisStore.ts         # FFT data, RMS, meters
+│   │   ├── educationStore.ts        # Beginner/advanced mode, tips
+│   │   ├── presetStore.ts           # Saved presets, snapshots
+│   │   └── uiStore.ts              # Panel visibility, layout
+│   │
+│   ├── education/
+│   │   ├── effectDescriptions.ts    # Static educational content per effect
+│   │   ├── dynamicFeedback.ts       # Generate contextual tips from params
+│   │   ├── recommendations.ts       # Rule-based audio analysis engine
+│   │   └── lessons/
+│   │       ├── compression101.ts
+│   │       ├── eqBasics.ts
+│   │       └── ...
+│   │
+│   ├── presets/
+│   │   ├── factory/                 # JSON preset files
+│   │   │   ├── vocal-cleanup.json
+│   │   │   ├── drum-punch.json
+│   │   │   └── ...
+│   │   └── presetManager.ts         # Load/save/IndexedDB
+│   │
+│   ├── types/
+│   │   ├── effects.ts               # Effect parameter type definitions
+│   │   ├── audio.ts                 # Audio engine types
+│   │   └── education.ts             # Educational content types
+│   │
+│   └── utils/
+│       ├── dsp-utils.ts             # JS-side DSP helpers (dB conversion etc)
+│       └── audio-analysis.ts        # Feature extraction for recommendations
+│
+├── dsp/                             # Rust WASM crate
+│   ├── Cargo.toml
+│   ├── src/
+│   │   ├── lib.rs                   # WASM entry point, exports
+│   │   ├── engine.rs                # Effect chain processor
+│   │   ├── effects/
+│   │   │   ├── mod.rs
+│   │   │   ├── compressor.rs
+│   │   │   ├── limiter.rs
+│   │   │   ├── gate.rs
+│   │   │   ├── eq.rs
+│   │   │   ├── reverb.rs
+│   │   │   ├── delay.rs
+│   │   │   ├── chorus.rs
+│   │   │   ├── flanger.rs
+│   │   │   ├── phaser.rs
+│   │   │   ├── saturation.rs
+│   │   │   ├── deesser.rs
+│   │   │   ├── transient_shaper.rs
+│   │   │   ├── noise_reduction.rs
+│   │   │   └── stereo_width.rs
+│   │   │
+│   │   ├── analysis/
+│   │   │   ├── mod.rs
+│   │   │   ├── fft.rs               # Spectral analysis via rustfft
+│   │   │   ├── loudness.rs          # RMS, peak, LUFS estimation
+│   │   │   └── features.rs          # Feature extraction for recommendations
+│   │   │
+│   │   └── utils/
+│   │       ├── filters.rs           # Biquad, SVF filter implementations
+│   │       ├── envelope.rs          # Envelope follower, ADSR
+│   │       ├── delay_line.rs        # Circular buffer delay
+│   │       └── math.rs              # dB conversion, interpolation
+│   │
+│   └── tests/
+│       └── ...
+│
+├── package.json
+├── vite.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+└── wrangler.toml                    # Cloudflare Pages config
+
+
+4. RECOMMENDATION ENGINE - LOGICA RULE-BASED
+================================================================================
+
+Feature Extraction (Rust WASM):
+- RMS loudness (overall, per-band)
+- Peak level
+- Crest factor (peak/RMS ratio = dynamic range indicator)
+- Spectral centroid (brightness)
+- Spectral balance (energy per octave band)
+- Noise floor estimation (quietest 10% of frames)
+- DC offset
+- Clipping detection (samples at ±1.0)
+
+Heuristic Rules:
+- noise_floor > -40dB → Suggest Noise Gate/Reduction, threshold = noise_floor + 6dB
+- crest_factor < 6dB → Warn: already heavily compressed
+- crest_factor > 20dB → Suggest compressor: ratio 3:1, threshold at RMS + 6dB
+- spectral_energy[60-250Hz] > spectral_energy[250-2kHz] * 1.5 → Boomy/muddy, suggest EQ cut at 200Hz
+- spectral_energy[2k-6kHz] > spectral_energy[250-2kHz] * 1.8 → Harsh, suggest EQ cut at 3-4kHz
+- spectral_centroid < 1000Hz → Dull, suggest high shelf boost +2dB at 8kHz
+- peak_level > -1dB → Suggest limiter at -1dB ceiling
+- dc_offset > 0.01 → Suggest HPF at 20Hz
+
+
+5. EFFECT PARAMETERS
+================================================================================
+
+COMPRESSOR:
+- threshold (-60 to 0 dB)
+- ratio (1:1 to 20:1)
+- attack (0.1 to 200 ms)
+- release (10 to 1000 ms)
+- knee (0 to 30 dB)
+- makeup gain (0 to 30 dB)
+- sidechain HPF frequency
+- dry/wet mix
+- auto gain option
+
+GATE:
+- threshold (-80 to 0 dB)
+- attack (0.01 to 50 ms)
+- hold (0 to 500 ms)
+- release (5 to 500 ms)
+- range (-90 to 0 dB)
+- hysteresis (0 to 10 dB)
+
+PARAMETRIC EQ (per band, 4-6 bands):
+- frequency (20 to 20000 Hz)
+- gain (-24 to +24 dB)
+- Q / bandwidth (0.1 to 18)
+- filter type (bell, low shelf, high shelf, HPF, LPF, notch)
+- slope (6/12/18/24 dB/oct for shelves/passes)
+
+REVERB:
+- room size (0 to 1)
+- decay time (0.1 to 10 s)
+- pre-delay (0 to 200 ms)
+- damping (0 to 1)
+- wet/dry mix
+- early reflections level
+
+DELAY:
+- time (1 to 2000 ms)
+- feedback (0 to 95%)
+- filter (LP/HP on feedback)
+- sync mode (free / tempo-synced)
+- wet/dry mix
+- ping-pong option
+
+LIMITER:
+- ceiling (-6 to 0 dB)
+- release (1 to 500 ms)
+- lookahead (0 to 10 ms)
+
+CHORUS:
+- rate (0.1 to 10 Hz)
+- depth (0 to 100%)
+- voices (1 to 6)
+- wet/dry mix
+
+FLANGER:
+- rate (0.01 to 10 Hz)
+- depth (0 to 100%)
+- feedback (-95 to 95%)
+- wet/dry mix
+
+PHASER:
+- rate (0.01 to 10 Hz)
+- depth (0 to 100%)
+- stages (2 to 12)
+- feedback (-95 to 95%)
+- wet/dry mix
+
+SATURATION:
+- drive (0 to 30 dB)
+- type (tape, tube, transistor, digital clip)
+- tone (dark to bright)
+- wet/dry mix
+
+DE-ESSER:
+- frequency (2000 to 12000 Hz)
+- threshold (-40 to 0 dB)
+- reduction (0 to 20 dB)
+- listen mode (on/off)
+
+TRANSIENT SHAPER:
+- attack gain (-24 to +24 dB)
+- sustain gain (-24 to +24 dB)
+- detection speed
+
+NOISE REDUCTION:
+- threshold/sensitivity
+- reduction amount (0 to 40 dB)
+- smoothing
+- learn noise profile
+
+STEREO WIDTH:
+- width (0 to 200%)
+- mid gain (-12 to +12 dB)
+- side gain (-12 to +12 dB)
+
+GAIN/TRIM:
+- gain (-inf to +24 dB)
+- phase invert
+- pan (-100L to 100R)
+
+
+6. MVP vs THESIS-COMPLETE vs FUTURE
+================================================================================
+
+MVP (Luna 1):
+- File upload + playback
+- Drag & drop
+- Waveform display (wavesurfer.js)
+- Compressor (Rust WASM)
+- Parametric EQ (Rust WASM)
+- Reverb (Rust WASM)
+- Gate (Rust WASM)
+- Delay (Rust WASM)
+- Gain/Trim
+- Effect bypass/enable
+- Dry/wet mix per effect
+- Spectrum analyzer (audiomotion-analyzer)
+- Parameter tooltips
+- Gain reduction meter
+- Rust WASM DSP engine + AudioWorklet bridge
+
+THESIS-COMPLETE (Luna 2):
+- Limiter, Chorus, Flanger, Phaser, Saturation, De-esser
+- Transient shaper, Noise reduction, Stereo width
+- Effect chain reorder (drag)
+- Spectrogram
+- Stereo field / phase meter
+- EQ curve SVG display
+- Before/after comparison
+- Recommendation engine
+- Dynamic educational text
+- A/B listening challenges
+- Factory presets + browser
+- Save user presets (IndexedDB)
+- WAV export
+- Guided lessons (2-3)
+- Hardware-inspired model descriptions
+- Beginner/advanced mode toggle
+- Deploy Cloudflare Pages
+
+FUTURE:
+- Synth lab + modular patching
+- Dynamic EQ
+- Mid/Side processing
+- De-clip/restoration
+- User accounts/cloud save
+- Mobile responsive
+
+
+7. PLAN DE IMPLEMENTARE - 8 SĂPTĂMÂNI
+================================================================================
+
+Săpt 1-2: Foundation
+- Setup Vite + React + TypeScript + Tailwind
+- Setup Rust WASM crate cu wasm-pack
+- AudioWorklet bridge (JS thin layer + WASM loader)
+- File upload + decode + playback cu Web Audio API
+- Waveform display cu wavesurfer.js
+- Basic transport (play/stop/loop)
+
+Săpt 3-4: Core DSP
+- Compressor, EQ, Reverb, Gate, Delay (Rust)
+- Gain/trim
+- Effect chain routing în WASM
+- UI: EffectCard components cu knobs
+- Spectrum analyzer cu audiomotion-analyzer
+- Gain reduction meter
+
+Săpt 5-6: Extended Effects + Education
+- Limiter, chorus, flanger, phaser, saturation, de-esser
+- Transient shaper, noise reduction, stereo width
+- Drag-to-reorder effect chain
+- Educational tooltips + InfoPanel
+- Dynamic feedback system
+- EQ curve SVG, spectrogram, before/after
+
+Săpt 7: Intelligence + Presets
+- Recommendation engine (feature extraction + heuristics)
+- Factory presets
+- Preset save/load IndexedDB
+- A/B challenge mode
+- Beginner/advanced mode
+
+Săpt 8: Polish + Deploy
+- Hardware-inspired model descriptions
+- Guided lessons (2-3 tutorials)
+- WAV export
+- UI polish, dark theme, animations
+- Deploy Cloudflare Pages
+- Bug fixes, testing, documentation
+
+
+8. INOVAȚIE ACADEMICĂ
+================================================================================
+
+1. WASM DSP Engine - Rust compilat la WebAssembly pentru procesare audio
+2. Contextual Educational Feedback - feedback adaptat la acțiunile utilizatorului
+3. Rule-based Audio Doctor - analiză spectrală → recomandări DSP explicabile
+4. Visual DSP Pipeline - vizualizare semnal la fiecare etapă din chain
+
+
+9. TEHNOLOGII FOLOSITE - REZUMAT
+================================================================================
+
+| Categorie          | Tehnologie                          | Versiune  |
+|--------------------|-------------------------------------|-----------|
+| UI Framework       | React                               | 18.x      |
+| Language           | TypeScript                          | 5.x       |
+| Build Tool         | Vite                                | 5.x       |
+| State Management   | Zustand                             | 4.x       |
+| CSS                | TailwindCSS                         | 3.x       |
+| UI Components      | Radix UI                            | latest    |
+| Audio Knobs        | react-knob-headless                 | latest    |
+| Waveform           | wavesurfer.js                       | 7.x       |
+| Spectrum           | audiomotion-analyzer                | 4.x       |
+| Transport          | Tone.js                             | 15.x      |
+| DSP Language       | Rust                                | stable    |
+| WASM Build         | wasm-pack                           | latest    |
+| DSP Lib            | fundsp                              | 0.18+     |
+| FFT                | rustfft / realfft                   | 6.x       |
+| Sample Processing  | dasp                                | 0.11+     |
+| Resampling         | rubato                              | 0.15+     |
+| WAV I/O            | hound                               | latest    |
+| Local Storage      | idb (IndexedDB wrapper)             | latest    |
+| Hosting            | Cloudflare Pages                    | free tier |
+| Audio Samples      | Freesound.org CC0                   | -         |
