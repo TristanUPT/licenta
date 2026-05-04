@@ -19,9 +19,12 @@ export default defineConfig({
     target: 'es2022',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          audio: ['tone', 'wavesurfer.js', 'audiomotion-analyzer'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) return 'vendor'
+            if (id.includes('tone') || id.includes('wavesurfer') || id.includes('audiomotion')) return 'audio'
+            if (id.includes('@radix-ui')) return 'ui'
+          }
         },
       },
     },
