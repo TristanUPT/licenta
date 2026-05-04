@@ -27,5 +27,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "dsp/pkg"]
+  "include": ["src"]
 }

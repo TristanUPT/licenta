@@ -1,14 +1,15 @@
 /**
- * Typed wrapper around the AudioWorklet message port.
- *
- * The port is owned by `engine.ts`, which installs a single message router
- * and dispatches to interested subscribers. This file only declares the
- * message shapes.
+ * Wire-format messages between the main thread and the AudioWorklet.
+ * The port itself is owned by `engine.ts` (single message router).
  */
 
 export type WorkletInMsg =
   | { type: 'init'; wasmBytes: ArrayBuffer }
-// More message variants land here in Phase 3+ (set_param, add_effect, …).
+  | { type: 'add_effect'; effectType: number; instanceId: number }
+  | { type: 'remove_effect'; instanceId: number }
+  | { type: 'set_param'; instanceId: number; paramId: number; value: number }
+  | { type: 'set_bypass'; instanceId: number; bypassed: boolean }
+  | { type: 'reorder'; order: number[] }
 
 export type WorkletOutMsg =
   | { type: 'hello' }

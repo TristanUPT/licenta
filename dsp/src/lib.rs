@@ -1,46 +1,15 @@
-//! SoundLab DSP Engine
+//! SoundLab DSP — `extern "C"` facade for the AudioWorklet.
 //!
-//! Audio engine compiled to WebAssembly. Loaded directly inside the AudioWorklet
-//! (not through wasm-bindgen JS glue) — see `public/worklets/dsp-processor.js`.
-//!
-//! Exposes plain `extern "C"` functions only. No `String` / `Vec` cross-boundary.
+//! All real logic lives in `engine.rs` and `effects/*.rs`. Functions here
+//! only marshal pointers / primitives across the WASM boundary.
 
 #![allow(clippy::missing_safety_doc)]
 
-/// Per-block size (Web Audio API render quantum). Hardcoded by spec.
-pub const RENDER_QUANTUM: usize = 128;
+pub mod effects;
+pub mod engine;
+pub mod utils;
 
-/// Real-time audio engine. In Phase 1 it is just a pass-through; effects come
-/// in Phase 3 (chain of `Box<dyn Effect>` mutated via `set_param` messages).
-pub struct Engine {
-    #[allow(dead_code)]
-    sample_rate: f32,
-    blocks_processed: u64,
-}
-
-impl Engine {
-    pub fn new(sample_rate: f32) -> Self {
-        Self {
-            sample_rate,
-            blocks_processed: 0,
-        }
-    }
-
-    pub fn process_block(&mut self, input: &[f32], output: &mut [f32]) {
-        let n = input.len().min(output.len());
-        output[..n].copy_from_slice(&input[..n]);
-        if output.len() > n {
-            for s in &mut output[n..] {
-                *s = 0.0;
-            }
-        }
-        self.blocks_processed = self.blocks_processed.wrapping_add(1);
-    }
-
-    pub fn blocks_processed(&self) -> u64 {
-        self.blocks_processed
-    }
-}
+pub use engine::{Engine, RENDER_QUANTUM};
 
 // ──────────────────────────────────────────────────────────────────────────
 //  Engine lifecycle
@@ -79,18 +48,70 @@ pub unsafe extern "C" fn process(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn get_blocks_processed(engine: *const Engine) -> u64 {
-    if engine.is_null() {
-        return 0;
-    }
+    if engine.is_null() { return 0 }
     unsafe { (*engine).blocks_processed() }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+//  Chain mutators
+// ──────────────────────────────────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn engine_add_effect(
+    engine: *mut Engine,
+    effect_type: u32,
+    instance_id: u32,
+) -> i32 {
+    if engine.is_null() { return -100 }
+    unsafe { (*engine).add_effect(effect_type, instance_id) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn engine_remove_effect(
+    engine: *mut Engine,
+    instance_id: u32,
+) -> i32 {
+    if engine.is_null() { return -100 }
+    unsafe { (*engine).remove_effect(instance_id) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn engine_set_param(
+    engine: *mut Engine,
+    instance_id: u32,
+    param_id: u32,
+    value: f32,
+) -> i32 {
+    if engine.is_null() { return -100 }
+    unsafe { (*engine).set_param(instance_id, param_id, value) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn engine_set_bypass(
+    engine: *mut Engine,
+    instance_id: u32,
+    bypassed: u32,
+) -> i32 {
+    if engine.is_null() { return -100 }
+    unsafe { (*engine).set_bypass(instance_id, bypassed != 0) }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn engine_reorder(
+    engine: *mut Engine,
+    ids_ptr: *const u32,
+    len: u32,
+) -> i32 {
+    if engine.is_null() || ids_ptr.is_null() { return -100 }
+    let n = len as usize;
+    let order = unsafe { core::slice::from_raw_parts(ids_ptr, n) };
+    unsafe { (*engine).reorder(order) }
 }
 
 // ──────────────────────────────────────────────────────────────────────────
 //  Buffer alloc / dealloc — f32-aligned for safe Float32Array views from JS
 // ──────────────────────────────────────────────────────────────────────────
 
-/// Allocate `n` f32 slots in WASM linear memory. Returns a 4-byte-aligned
-/// pointer suitable for `new Float32Array(buffer, ptr, n)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn alloc_f32(n: usize) -> *mut f32 {
     let mut buf = Vec::<f32>::with_capacity(n);
@@ -106,72 +127,52 @@ pub unsafe extern "C" fn dealloc_f32(ptr: *mut f32, n: usize) {
     }
 }
 
+/// Allocate `n` u32 slots — used for chain reorder lists.
+#[unsafe(no_mangle)]
+pub extern "C" fn alloc_u32(n: usize) -> *mut u32 {
+    let mut buf = Vec::<u32>::with_capacity(n);
+    let ptr = buf.as_mut_ptr();
+    core::mem::forget(buf);
+    ptr
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dealloc_u32(ptr: *mut u32, n: usize) {
+    if !ptr.is_null() {
+        unsafe { drop(Vec::from_raw_parts(ptr, 0, n)) };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn passthrough_copies_input_to_output() {
-        let mut eng = Engine::new(48_000.0);
-        let input: Vec<f32> = (0..RENDER_QUANTUM).map(|i| i as f32 * 0.001).collect();
-        let mut output = vec![0.0_f32; RENDER_QUANTUM];
-        eng.process_block(&input, &mut output);
-        assert_eq!(input, output);
-    }
-
-    #[test]
-    fn passthrough_zero_pads_when_output_larger() {
-        let mut eng = Engine::new(48_000.0);
-        let input = vec![1.0_f32; 8];
-        let mut output = vec![9.9_f32; 16];
-        eng.process_block(&input, &mut output);
-        assert_eq!(&output[..8], &[1.0; 8]);
-        assert_eq!(&output[8..], &[0.0; 8]);
-    }
-
-    #[test]
-    fn block_counter_increments() {
-        let mut eng = Engine::new(48_000.0);
-        let input = [0.0_f32; 4];
-        let mut output = [0.0_f32; 4];
-        for _ in 0..5 {
-            eng.process_block(&input, &mut output);
-        }
-        assert_eq!(eng.blocks_processed(), 5);
-    }
-
-    #[test]
-    fn alloc_dealloc_roundtrip() {
-        unsafe {
-            let ptr = alloc_f32(128);
-            assert!(!ptr.is_null());
-            assert_eq!((ptr as usize) % 4, 0, "f32 alloc must be 4-byte aligned");
-            dealloc_f32(ptr, 128);
-        }
-    }
-
-    #[test]
-    fn create_destroy_roundtrip() {
+    fn ffi_roundtrip_with_gain() {
         unsafe {
             let eng = create_engine(48_000.0);
             assert!(!eng.is_null());
-            let mut input = [0.5_f32; 4];
-            let mut output = [0.0_f32; 4];
-            let rc = process(eng, input.as_mut_ptr(), output.as_mut_ptr(), 4);
-            assert_eq!(rc, 0);
-            assert_eq!(output, [0.5, 0.5, 0.5, 0.5]);
-            assert_eq!(get_blocks_processed(eng), 1);
-            destroy_engine(eng);
-        }
-    }
 
-    #[test]
-    fn process_rejects_null_pointers() {
-        unsafe {
-            assert_eq!(
-                process(core::ptr::null_mut(), core::ptr::null(), core::ptr::null_mut(), 0),
-                -1
-            );
+            // Add Gain (type=0) with id=42, set -6 dB.
+            assert_eq!(engine_add_effect(eng, 0, 42), 0);
+            assert_eq!(engine_set_param(eng, 42, 0, -6.0206), 0);
+
+            // Pump audio — settle the smoother — then inspect.
+            let mut input = [1.0_f32; 128];
+            let mut output = [0.0_f32; 128];
+            for _ in 0..50 {
+                process(eng, input.as_mut_ptr(), output.as_mut_ptr(), 128);
+            }
+            let avg = output.iter().sum::<f32>() / 128.0;
+            assert!((avg - 0.5).abs() < 1e-3);
+
+            assert_eq!(engine_set_bypass(eng, 42, 1), 0);
+            for _ in 0..50 {
+                process(eng, input.as_mut_ptr(), output.as_mut_ptr(), 128);
+            }
+            assert!((output[127] - 1.0).abs() < 1e-6);
+
+            destroy_engine(eng);
         }
     }
 }

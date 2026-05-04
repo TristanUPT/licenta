@@ -1,18 +1,10 @@
 // SoundLab DSP AudioWorklet processor.
 //
-// Runs in AudioWorkletGlobalScope (separate thread, no DOM/fetch/window).
-// Loads the SoundLab DSP WASM module sent from the main thread and forwards
-// audio frames through it.
-//
-// Wire-format messages:
-//   main → worklet: { type: 'init', wasmModule: WebAssembly.Module }
-//   worklet → main: { type: 'hello' }                (sent at construction)
-//                   { type: 'ready' }                (sent after WASM init)
-//                   { type: 'error', message }
-//                   { type: 'stats', blocksProcessed, inputRms, outputRms }
+// Runs in AudioWorkletGlobalScope. Loads the SoundLab DSP WASM module sent
+// from the main thread and forwards audio frames + control messages.
 
 const RENDER_QUANTUM = 128;
-const STATS_EVERY_N_BLOCKS = 37;  // ≈ 100 ms at 48 kHz/128
+const STATS_EVERY_N_BLOCKS = 37;  // ≈ 100 ms at 48 kHz / 128
 
 class DspProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -27,47 +19,85 @@ class DspProcessor extends AudioWorkletProcessor {
     this.localBlockCount = 0;
 
     this.port.onmessage = (event) => this._onMessage(event.data);
-    // Tell the main thread we exist and are ready to receive `init`.
     this.port.postMessage({ type: 'hello' });
     console.log('[worklet] processor constructed; sent hello');
   }
 
   _onMessage(msg) {
-    if (msg && msg.type === 'init') {
-      console.log('[worklet] init received, compiling WASM…');
-      this._init(msg.wasmBytes).catch((err) => {
-        const message = err && err.message ? err.message : String(err);
-        console.error('[worklet] init error:', message);
-        this.port.postMessage({ type: 'error', message });
-      });
+    if (!msg) return;
+    try {
+      switch (msg.type) {
+        case 'init':
+          this._init(msg.wasmBytes).catch((err) => this._postError(err, 'init'));
+          break;
+        case 'add_effect':
+          if (this.ready) {
+            const rc = this.wasm.engine_add_effect(this.enginePtr, msg.effectType, msg.instanceId);
+            if (rc !== 0) console.warn('[worklet] add_effect rc=', rc);
+          }
+          break;
+        case 'remove_effect':
+          if (this.ready) {
+            this.wasm.engine_remove_effect(this.enginePtr, msg.instanceId);
+          }
+          break;
+        case 'set_param':
+          if (this.ready) {
+            this.wasm.engine_set_param(this.enginePtr, msg.instanceId, msg.paramId, msg.value);
+          }
+          break;
+        case 'set_bypass':
+          if (this.ready) {
+            this.wasm.engine_set_bypass(this.enginePtr, msg.instanceId, msg.bypassed ? 1 : 0);
+          }
+          break;
+        case 'reorder':
+          if (this.ready) this._reorder(msg.order);
+          break;
+      }
+    } catch (err) {
+      this._postError(err, 'message');
     }
   }
 
+  _postError(err, context) {
+    const message = err && err.message ? err.message : String(err);
+    console.error(`[worklet] ${context} error:`, message);
+    this.port.postMessage({ type: 'error', message: `${context}: ${message}` });
+  }
+
   async _init(wasmBytes) {
+    console.log('[worklet] init received, compiling WASM…');
     const { instance } = await WebAssembly.instantiate(wasmBytes, {});
     this.wasm = instance.exports;
     console.log('[worklet] wasm exports:', Object.keys(this.wasm));
 
-    // alloc_f32 returns a 4-byte-aligned f32 pointer.
     this.inputPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.outputPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.enginePtr = this.wasm.create_engine(sampleRate);
-    // Refresh views AFTER all allocations to handle any memory growth.
     this._refreshViews();
 
     this.ready = true;
     console.log(
       '[worklet] ready. enginePtr=', this.enginePtr,
-      'inputPtr=', this.inputPtr,
-      'outputPtr=', this.outputPtr,
       'sampleRate=', sampleRate,
     );
     this.port.postMessage({ type: 'ready' });
   }
 
+  _reorder(order) {
+    if (!Array.isArray(order) || order.length === 0) return;
+    const ptr = this.wasm.alloc_u32(order.length);
+    try {
+      const view = new Uint32Array(this.wasm.memory.buffer, ptr, order.length);
+      for (let i = 0; i < order.length; i++) view[i] = order[i] >>> 0;
+      this.wasm.engine_reorder(this.enginePtr, ptr, order.length);
+    } finally {
+      this.wasm.dealloc_u32(ptr, order.length);
+    }
+  }
+
   _refreshViews() {
-    // WASM pointers are byte offsets into linear memory regardless of pointee
-    // type. alloc_f32 guarantees a 4-byte-aligned offset.
     const buffer = this.wasm.memory.buffer;
     this.inputView = new Float32Array(buffer, this.inputPtr, RENDER_QUANTUM);
     this.outputView = new Float32Array(buffer, this.outputPtr, RENDER_QUANTUM);
@@ -80,10 +110,8 @@ class DspProcessor extends AudioWorkletProcessor {
     const output = outputs[0];
     if (!output || output.length === 0) return true;
 
-    // If our views detached due to memory growth, recover.
     if (this.inputView.length === 0) this._refreshViews();
 
-    // Mono-collapse the input.
     if (input && input.length > 0 && input[0] && input[0].length > 0) {
       const ch0 = input[0];
       if (input.length > 1 && input[1] && input[1].length > 0) {

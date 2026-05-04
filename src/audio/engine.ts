@@ -162,3 +162,32 @@ export function subscribeStats(listener: StatsListener): () => void {
   statsListeners.add(listener)
   return () => statsListeners.delete(listener)
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+//  Effect-chain controls (forward to worklet via typed messages)
+// ──────────────────────────────────────────────────────────────────────────
+
+function postOrThrow(msg: WorkletInMsg): void {
+  if (!node) throw new Error('Engine not running — call start() first.')
+  node.port.postMessage(msg)
+}
+
+export function addEffect(effectType: number, instanceId: number): void {
+  postOrThrow({ type: 'add_effect', effectType, instanceId })
+}
+
+export function removeEffect(instanceId: number): void {
+  postOrThrow({ type: 'remove_effect', instanceId })
+}
+
+export function setParam(instanceId: number, paramId: number, value: number): void {
+  postOrThrow({ type: 'set_param', instanceId, paramId, value })
+}
+
+export function setBypass(instanceId: number, bypassed: boolean): void {
+  postOrThrow({ type: 'set_bypass', instanceId, bypassed })
+}
+
+export function reorderEffects(order: number[]): void {
+  postOrThrow({ type: 'reorder', order })
+}

@@ -4,6 +4,7 @@ import { useAudioStore } from '@/store/audioStore'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
+import { EffectsRack } from '@/components/workspace/EffectsRack'
 
 const STATUS_LABEL: Record<EngineStatus, string> = {
   idle: 'idle',
@@ -41,7 +42,10 @@ function App() {
 
       <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-8">
         {currentFile ? (
-          <WaveformView />
+          <>
+            <WaveformView />
+            <EffectsRack />
+          </>
         ) : (
           <FileDropZone />
         )}
