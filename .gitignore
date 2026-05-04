@@ -25,10 +25,6 @@ dsp/target/
 .DS_Store
 Thumbs.db
 
-# Claude
-CLAUDE.md
-.claude/
-
 # Logs
 *.log
 npm-debug.log*
