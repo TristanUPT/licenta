@@ -8,6 +8,7 @@ import {
   type ParamSchema,
 } from '@/types/effects'
 import { Knob } from '@/components/controls/Knob'
+import { EQCurveDisplay } from '@/components/visualization/EQCurveDisplay'
 import { EffectCard } from './EffectCard'
 
 interface ParametricEQProps {
@@ -27,6 +28,9 @@ export function ParametricEQ({ instance }: ParametricEQProps) {
 
   return (
     <EffectCard instance={instance}>
+      <div className="mb-3 w-full">
+        <EQCurveDisplay instance={instance} />
+      </div>
       <div className="grid w-full grid-cols-4 gap-3">
         {bands.map((bandIdx) => {
           const enabledId = eqParamId(bandIdx, EQ_BAND_PARAM.ENABLED)

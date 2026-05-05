@@ -15,4 +15,12 @@ export type WorkletOutMsg =
   | { type: 'hello' }
   | { type: 'ready' }
   | { type: 'error'; message: string }
-  | { type: 'stats'; blocksProcessed: number; inputRms: number; outputRms: number }
+  | {
+      type: 'stats'
+      blocksProcessed: number
+      inputRms: number
+      outputRms: number
+      outputPeak: number
+      /** Primary meter (id 0) per effect: e.g. compressor gain reduction in dB. */
+      effectMeters: { id: number; value: number }[]
+    }

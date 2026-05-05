@@ -115,6 +115,22 @@ impl Engine {
         }
     }
 
+    /// Snapshot every effect's meter into the supplied buffers.
+    /// Returns the number of slots filled (≤ chain.len() and ≤ buf capacities).
+    pub fn collect_meters(
+        &self,
+        meter_id: u32,
+        ids: &mut [u32],
+        values: &mut [f32],
+    ) -> u32 {
+        let cap = ids.len().min(values.len()).min(self.chain.len());
+        for i in 0..cap {
+            ids[i] = self.chain[i].id;
+            values[i] = self.chain[i].effect.get_meter(meter_id);
+        }
+        cap as u32
+    }
+
     /// Reorder the chain to match `order`. Each id in `order` must already
     /// exist in the chain; missing ids leave their slots unchanged at the
     /// tail. Returns 0 on success, -1 if any id is unknown.

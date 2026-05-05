@@ -13,6 +13,8 @@ export interface EngineStats {
   blocksProcessed: number
   inputRms: number
   outputRms: number
+  outputPeak: number
+  effectMeters: { id: number; value: number }[]
 }
 
 type Listener = (status: EngineStatus, error?: string) => void

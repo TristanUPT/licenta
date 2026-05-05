@@ -4,6 +4,7 @@ import { useAudioStore } from '@/store/audioStore'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
+import { SpectrumAnalyzer } from '@/components/visualization/SpectrumAnalyzer'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
 
 const STATUS_LABEL: Record<EngineStatus, string> = {
@@ -44,6 +45,7 @@ function App() {
         {currentFile ? (
           <>
             <WaveformView />
+            <SpectrumAnalyzer />
             <EffectsRack />
           </>
         ) : (

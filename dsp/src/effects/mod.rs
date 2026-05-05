@@ -38,6 +38,9 @@ pub trait Effect {
     fn set_param(&mut self, param_id: u32, value: f32);
     /// Reset internal state (envelopes, delay buffers, smoothers).
     fn reset(&mut self);
+    /// Read a metering value (meter_id 0 = primary, e.g. compressor GR in dB).
+    /// Default returns 0.0 — opt in by overriding.
+    fn get_meter(&self, _meter_id: u32) -> f32 { 0.0 }
 }
 
 /// Construct a fresh effect instance for a given type.

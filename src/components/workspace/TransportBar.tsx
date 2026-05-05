@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAudioStore } from '@/store/audioStore'
 import * as transport from '@/audio/transport'
+import { LevelMeter } from '@/components/visualization/LevelMeter'
 
 function formatTime(sec: number): string {
   if (!isFinite(sec) || sec < 0) sec = 0
@@ -61,6 +62,7 @@ export function TransportBar() {
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
+      <LevelMeter height={48} width={20} />
       <div className="flex items-center gap-2">
         <button
           onClick={handlePlayPause}

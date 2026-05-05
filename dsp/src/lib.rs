@@ -108,6 +108,27 @@ pub unsafe extern "C" fn engine_reorder(
     unsafe { (*engine).reorder(order) }
 }
 
+/// Snapshot every effect's meter into JS-side buffers.
+/// Returns the number of (id, value) pairs written, or 0 on error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn engine_collect_meters(
+    engine: *const Engine,
+    meter_id: u32,
+    ids_ptr: *mut u32,
+    values_ptr: *mut f32,
+    capacity: u32,
+) -> u32 {
+    if engine.is_null() || ids_ptr.is_null() || values_ptr.is_null() {
+        return 0;
+    }
+    let cap = capacity as usize;
+    unsafe {
+        let ids = core::slice::from_raw_parts_mut(ids_ptr, cap);
+        let vals = core::slice::from_raw_parts_mut(values_ptr, cap);
+        (*engine).collect_meters(meter_id, ids, vals)
+    }
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 //  Buffer alloc / dealloc — f32-aligned for safe Float32Array views from JS
 // ──────────────────────────────────────────────────────────────────────────

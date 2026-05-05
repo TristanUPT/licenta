@@ -170,6 +170,13 @@ impl Effect for Compressor {
         self.smoothed_dry_wet = self.target_dry_wet;
         self.last_gr_db = 0.0;
     }
+
+    fn get_meter(&self, meter_id: u32) -> f32 {
+        match meter_id {
+            0 => self.last_gr_db,
+            _ => 0.0,
+        }
+    }
 }
 
 #[cfg(test)]

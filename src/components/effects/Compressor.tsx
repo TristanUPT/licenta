@@ -1,6 +1,7 @@
 import { useEffectsStore } from '@/store/effectsStore'
 import { COMPRESSOR_DEFINITION, type EffectInstance } from '@/types/effects'
 import { Knob } from '@/components/controls/Knob'
+import { GainReductionMeter } from '@/components/visualization/GainReductionMeter'
 import { EffectCard } from './EffectCard'
 
 interface CompressorProps {
@@ -12,6 +13,7 @@ export function Compressor({ instance }: CompressorProps) {
 
   return (
     <EffectCard instance={instance}>
+      <GainReductionMeter effectId={instance.id} />
       {COMPRESSOR_DEFINITION.params.map((schema) => (
         <Knob
           key={schema.id}
