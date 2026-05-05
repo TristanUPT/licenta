@@ -5,6 +5,8 @@
 //! The main thread keeps a parallel TS table; no string keys cross the
 //! WASM boundary.
 
+pub mod compressor;
+pub mod eq;
 pub mod gain;
 
 /// Stable identifiers for effect types. Must match `EffectType` enum on the
@@ -13,16 +15,16 @@ pub mod gain;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EffectType {
     Gain = 0,
-    // Reserved for Phase 3b / 6:
-    // Compressor = 1,
-    // ParametricEq = 2,
-    // ...
+    Compressor = 1,
+    ParametricEq = 2,
 }
 
 impl EffectType {
     pub fn from_u32(v: u32) -> Option<Self> {
         match v {
             0 => Some(EffectType::Gain),
+            1 => Some(EffectType::Compressor),
+            2 => Some(EffectType::ParametricEq),
             _ => None,
         }
     }
@@ -42,5 +44,7 @@ pub trait Effect {
 pub fn build(effect_type: EffectType, sample_rate: f32) -> Box<dyn Effect> {
     match effect_type {
         EffectType::Gain => Box::new(gain::Gain::new(sample_rate)),
+        EffectType::Compressor => Box::new(compressor::Compressor::new(sample_rate)),
+        EffectType::ParametricEq => Box::new(eq::ParametricEq::new(sample_rate)),
     }
 }

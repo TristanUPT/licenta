@@ -4,11 +4,17 @@ import { useEffectsStore } from '@/store/effectsStore'
 import { EFFECT_DEFINITIONS, EffectType, type EffectInstance } from '@/types/effects'
 import { getStatus } from '@/audio/engine'
 import { Gain } from '@/components/effects/Gain'
+import { Compressor } from '@/components/effects/Compressor'
+import { ParametricEQ } from '@/components/effects/ParametricEQ'
 
 function renderEffect(instance: EffectInstance) {
   switch (instance.type) {
     case EffectType.Gain:
       return <Gain key={instance.id} instance={instance} />
+    case EffectType.Compressor:
+      return <Compressor key={instance.id} instance={instance} />
+    case EffectType.ParametricEq:
+      return <ParametricEQ key={instance.id} instance={instance} />
     default:
       return null
   }
