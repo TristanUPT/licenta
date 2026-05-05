@@ -20,6 +20,7 @@ export function Compressor({ instance }: CompressorProps) {
           schema={schema}
           value={instance.params[schema.id] ?? schema.default}
           onChange={(v) => setParam(instance.id, schema.id, v)}
+          effectType={instance.type}
         />
       ))}
     </EffectCard>

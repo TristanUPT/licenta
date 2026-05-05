@@ -81,16 +81,19 @@ export function ParametricEQ({ instance }: ParametricEQProps) {
                   schema={findSchema(freqId)}
                   value={instance.params[freqId] ?? findSchema(freqId).default}
                   onChange={(v) => setParam(instance.id, freqId, v)}
+                  effectType={instance.type}
                 />
                 <Knob
                   schema={findSchema(gainId)}
                   value={instance.params[gainId] ?? findSchema(gainId).default}
                   onChange={(v) => setParam(instance.id, gainId, v)}
+                  effectType={instance.type}
                 />
                 <Knob
                   schema={findSchema(qId)}
                   value={instance.params[qId] ?? findSchema(qId).default}
                   onChange={(v) => setParam(instance.id, qId, v)}
+                  effectType={instance.type}
                 />
               </div>
             </div>

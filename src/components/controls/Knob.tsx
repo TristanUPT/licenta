@@ -1,6 +1,7 @@
 import { useId, useRef, useState, useCallback } from 'react'
 import { KnobHeadless, KnobHeadlessLabel } from 'react-knob-headless'
-import type { ParamSchema } from '@/types/effects'
+import type { EffectType, ParamSchema } from '@/types/effects'
+import { ParamTooltip } from '@/components/education/ParamTooltip'
 
 const ARC_START_DEG = -135
 const ARC_END_DEG = 135
@@ -10,6 +11,8 @@ interface KnobProps {
   schema: ParamSchema
   value: number
   onChange: (value: number) => void
+  /** When provided, hovering the knob shows the educational tooltip. */
+  effectType?: EffectType
 }
 
 function valueTo01(value: number, min: number, max: number, scale: ParamSchema['scale']): number {
@@ -45,7 +48,7 @@ function describeArc(t: number): string {
   return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`
 }
 
-export function Knob({ schema, value, onChange }: KnobProps) {
+export function Knob({ schema, value, onChange, effectType }: KnobProps) {
   const knobId = useId()
   const labelId = useId()
   const [hovered, setHovered] = useState(false)
@@ -65,7 +68,7 @@ export function Knob({ schema, value, onChange }: KnobProps) {
     return v
   }, [scale])
 
-  return (
+  const inner = (
     <div
       className="flex flex-col items-center gap-1"
       onPointerEnter={() => setHovered(true)}
@@ -131,4 +134,13 @@ export function Knob({ schema, value, onChange }: KnobProps) {
       </div>
     </div>
   )
+
+  if (effectType !== undefined) {
+    return (
+      <ParamTooltip effectType={effectType} paramId={schema.id}>
+        {inner}
+      </ParamTooltip>
+    )
+  }
+  return inner
 }

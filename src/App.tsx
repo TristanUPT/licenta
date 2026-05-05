@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
+import * as Switch from '@radix-ui/react-switch'
 import { getStatus, subscribe, type EngineStatus } from '@/audio/engine'
 import { useAudioStore } from '@/store/audioStore'
+import { useEducationStore } from '@/store/educationStore'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
 import { SpectrumAnalyzer } from '@/components/visualization/SpectrumAnalyzer'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
+import { InfoPanel } from '@/components/education/InfoPanel'
 
 const STATUS_LABEL: Record<EngineStatus, string> = {
   idle: 'idle',
@@ -25,6 +28,10 @@ function App() {
   useEffect(() => subscribe((s) => setStatus(s)), [])
 
   const currentFile = useAudioStore((s) => s.currentFile)
+  const mode = useEducationStore((s) => s.mode)
+  const language = useEducationStore((s) => s.language)
+  const setMode = useEducationStore((s) => s.setMode)
+  const setLanguage = useEducationStore((s) => s.setLanguage)
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
@@ -35,9 +42,39 @@ function App() {
           </h1>
           <span className="text-xs text-zinc-500">Mini-DAW Educațional</span>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
-          <span className="text-zinc-400">engine: {STATUS_LABEL[status]}</span>
+        <div className="flex items-center gap-5 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-500">Mode</span>
+            <Switch.Root
+              checked={mode === 'advanced'}
+              onCheckedChange={(c) => setMode(c ? 'advanced' : 'beginner')}
+              aria-label="Toggle beginner / advanced mode"
+              className="relative h-5 w-10 cursor-pointer rounded-full bg-zinc-800 transition data-[state=checked]:bg-purple-600"
+            >
+              <Switch.Thumb className="block h-4 w-4 translate-x-0.5 rounded-full bg-zinc-200 shadow transition-transform will-change-transform data-[state=checked]:translate-x-[22px]" />
+            </Switch.Root>
+            <span className="w-16 text-zinc-300">{mode === 'beginner' ? 'Beginner' : 'Advanced'}</span>
+          </div>
+
+          <div className="flex items-center gap-1 rounded-md border border-zinc-800 p-0.5">
+            <button
+              onClick={() => setLanguage('ro')}
+              className={`px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider transition ${
+                language === 'ro' ? 'rounded bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >RO</button>
+            <button
+              onClick={() => setLanguage('en')}
+              className={`px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider transition ${
+                language === 'en' ? 'rounded bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >EN</button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
+            <span className="text-zinc-400">engine: {STATUS_LABEL[status]}</span>
+          </div>
         </div>
       </header>
 
@@ -46,6 +83,7 @@ function App() {
           <>
             <WaveformView />
             <SpectrumAnalyzer />
+            <InfoPanel />
             <EffectsRack />
           </>
         ) : (

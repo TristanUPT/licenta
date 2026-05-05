@@ -18,6 +18,7 @@ export function Gain({ instance }: GainProps) {
           schema={schema}
           value={instance.params[schema.id] ?? schema.default}
           onChange={(v) => setParam(instance.id, schema.id, v)}
+          effectType={instance.type}
         />
       ))}
     </EffectCard>
