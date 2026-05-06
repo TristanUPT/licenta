@@ -210,6 +210,60 @@ mod tests {
     }
 
     #[test]
+    fn gate_in_chain_at_threshold_zero_silences_typical_audio() {
+        // This mirrors the live UI scenario the user reported: Gate added,
+        // threshold set to 0 dB, "typical" audio at ≤ 0.5 amplitude.
+        let mut eng = Engine::new(48_000.0);
+        assert_eq!(eng.add_effect(3, 1), 0);
+        eng.set_param(1, 0, 0.0);    // THRESHOLD_DB = 0
+        eng.set_param(1, 1, 2.0);
+        eng.set_param(1, 2, 20.0);
+        eng.set_param(1, 3, 80.0);
+        eng.set_param(1, 4, -60.0);
+        eng.set_param(1, 5, 3.0);
+        eng.set_param(1, 6, 1.0);
+
+        // 0.5-amplitude sine — peaks well below 0 dBFS = 1.0.
+        let block: Vec<f32> = (0..128)
+            .map(|i| 0.5 * (2.0 * core::f32::consts::PI * 440.0 * i as f32 / 48_000.0).sin())
+            .collect();
+        let mut out = vec![0.0_f32; 128];
+        for _ in 0..200 {
+            eng.process_block(&block, &mut out);
+        }
+        let in_peak = block.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+        let out_peak = out.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+        assert!(out_peak < in_peak * 0.01,
+            "gate at threshold 0 dB should heavily attenuate 0.5-amp signal: in_peak={}, out_peak={}",
+            in_peak, out_peak);
+    }
+
+    #[test]
+    fn gate_in_chain_attenuates_quiet_signal() {
+        // Mirror what `effectsStore.addEffect` does: build a Gate, then
+        // push the UI defaults via `set_param` in the same order as TS.
+        let mut eng = Engine::new(48_000.0);
+        assert_eq!(eng.add_effect(3, 1), 0); // 3 = EffectType::Gate
+        // Defaults from `GATE_DEFINITION` (TS schema):
+        eng.set_param(1, 0, -40.0);  // THRESHOLD_DB
+        eng.set_param(1, 1, 2.0);    // ATTACK_MS
+        eng.set_param(1, 2, 20.0);   // HOLD_MS
+        eng.set_param(1, 3, 80.0);   // RELEASE_MS
+        eng.set_param(1, 4, -60.0);  // RANGE_DB
+        eng.set_param(1, 5, 3.0);    // HYSTERESIS_DB
+        eng.set_param(1, 6, 1.0);    // DRY_WET
+
+        // Quiet signal well below -40 dBFS threshold → gate should attenuate.
+        let block: Vec<f32> = (0..128).map(|i| 0.005 * (0.05 * i as f32).sin()).collect();
+        let mut out = vec![0.0_f32; 128];
+        for _ in 0..200 {
+            eng.process_block(&block, &mut out);
+        }
+        let peak = out.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+        assert!(peak < 1e-3, "gate failed to attenuate; peak {}", peak);
+    }
+
+    #[test]
     fn reorder_validates_unknown_ids() {
         let mut eng = Engine::new(48_000.0);
         eng.add_effect(0, 1);

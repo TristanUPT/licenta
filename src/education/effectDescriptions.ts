@@ -8,10 +8,15 @@
 
 import {
   COMPRESSOR_PARAM,
+  DELAY_PARAM,
   EQ_BAND_PARAM,
   EQ_PARAMS_PER_BAND,
   EffectType,
   GAIN_PARAM,
+  GATE_PARAM,
+  LIMITER_PARAM,
+  REVERB_PARAM,
+  SATURATION_PARAM,
 } from '@/types/effects'
 
 export interface BilingualText {
@@ -396,10 +401,217 @@ const EQ_DOCS: EffectDocs = {
   })(),
 }
 
+// ─── Gate ────────────────────────────────────────────────────────────────
+
+const GATE_DOCS: EffectDocs = {
+  title: { ro: 'Noise Gate', en: 'Noise Gate' },
+  summary: {
+    ro: {
+      beginner: 'Reduce semnalul când e sub un anumit nivel — îți "tace" pauzele dintre fraze. Util pentru voce cu zgomot de fond, drums cu bleed.',
+      advanced: 'Downward expander cu state machine (closed/opening/open/closing) și hysteresis. Asymmetric attack/hold/release pe envelope follower peak.',
+    },
+    en: {
+      beginner: 'Cuts the signal when it drops below a level — silences the gaps between phrases. Useful for noisy vocal tracks, drums with bleed.',
+      advanced: 'Downward expander with a state machine (closed/opening/open/closing) and hysteresis. Asymmetric attack/hold/release driven by a peak envelope follower.',
+    },
+  },
+  params: {
+    [GATE_PARAM.THRESHOLD_DB]: {
+      title: { ro: 'Threshold', en: 'Threshold' },
+      body: {
+        ro: { beginner: 'Nivelul de la care gate-ul se deschide. Sub el = tăcere.', advanced: 'Open level în dBFS. Combină cu Hysteresis pentru a evita chattering pe semnal aproape de prag.' },
+        en: { beginner: 'Level above which the gate opens. Below it = silence.', advanced: 'Open level in dBFS. Pair with Hysteresis to avoid chattering on signal hovering near the threshold.' },
+      },
+    },
+    [GATE_PARAM.ATTACK_MS]: {
+      title: { ro: 'Attack', en: 'Attack' },
+      body: {
+        ro: { beginner: 'Cât de repede se deschide gate-ul. Rapid = lasă transient-ele să treacă; lent = "fade in" audibil.', advanced: 'Time constant pentru rise-ul gain-ului către 1.0. Sub 5 ms pe drums; 5-20 ms pe voce.' },
+        en: { beginner: 'How fast the gate opens. Fast = lets transients through; slow = audible fade-in.', advanced: 'Time constant for the gain to ramp to 1.0. Sub-5 ms for drums; 5-20 ms on vocals.' },
+      },
+    },
+    [GATE_PARAM.HOLD_MS]: {
+      title: { ro: 'Hold', en: 'Hold' },
+      body: {
+        ro: { beginner: 'Cât timp rămâne deschis după ce semnalul a scăzut sub threshold. Previne închideri intempestive între cuvinte.', advanced: 'Counter în samples; gate-ul refuză să încheie cycle-ul de release până nu trec hold_samples.' },
+        en: { beginner: 'How long the gate stays open after the signal drops. Prevents premature closing between words.', advanced: 'Sample counter; gate refuses to start the release cycle until hold_samples elapse.' },
+      },
+    },
+    [GATE_PARAM.RELEASE_MS]: {
+      title: { ro: 'Release', en: 'Release' },
+      body: {
+        ro: { beginner: 'Cât de natural se închide după hold. Prea rapid → "chopping" audibil.', advanced: 'Fall time toward range_lin. 50-200 ms = release muzical pe voce.' },
+        en: { beginner: 'How smoothly the gate closes after hold. Too fast → audible chopping.', advanced: 'Fall time toward range_lin. 50-200 ms gives a musical release on vocals.' },
+      },
+    },
+    [GATE_PARAM.RANGE_DB]: {
+      title: { ro: 'Range', en: 'Range' },
+      body: {
+        ro: { beginner: 'Cât de tare e atenuată zona "închisă". -60 dB ≈ tăcere; 0 dB = fără efect.', advanced: 'Floor gain când gate-ul e închis. Folosește valori moderate (-20 dB) pentru efect mai natural.' },
+        en: { beginner: 'How much the closed region is attenuated. -60 dB ≈ silence; 0 dB = no effect.', advanced: 'Floor gain when closed. Use moderate values (-20 dB) for a more natural effect.' },
+      },
+    },
+    [GATE_PARAM.HYSTERESIS_DB]: {
+      title: { ro: 'Hysteresis', en: 'Hysteresis' },
+      body: {
+        ro: { beginner: 'Diferența între pragul de deschidere și de închidere. Mare = mai puțin "chattering" pe semnal cu nivel oscilant.', advanced: 'Close threshold = open threshold − hysteresis. Schmitt-trigger style.' },
+        en: { beginner: 'Gap between open and close thresholds. Larger = less chattering on signals near the threshold.', advanced: 'Close threshold = open − hysteresis. Schmitt-trigger style.' },
+      },
+    },
+    [GATE_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: { ro: { beginner: 'Blendează gate-ul cu originalul.', advanced: 'Linear crossfade între gate output și signal-ul brut.' }, en: { beginner: 'Blends the gated signal with the original.', advanced: 'Linear crossfade between gated output and raw signal.' } },
+    },
+  },
+}
+
+// ─── Limiter ─────────────────────────────────────────────────────────────
+
+const LIMITER_DOCS: EffectDocs = {
+  title: { ro: 'Limiter', en: 'Limiter' },
+  summary: {
+    ro: {
+      beginner: 'Pune un plafon pe ce iese din chain — peak-urile sunt împinse sub un ceiling fix. Folosit la final de chain pentru maximizare loudness sigură.',
+      advanced: 'Peak limiter cu lookahead 5 ms (delay line). Attack instant la coborâre + release configurable. Garanteaza output ≤ ceiling pe peak-urile sample-rate-detected.',
+    },
+    en: {
+      beginner: "Puts a hard ceiling on the output — peaks are pushed below a fixed level. Used at the end of the chain for safe loudness maximisation.",
+      advanced: 'Peak limiter with 5 ms lookahead (delay line). Instant attack on falling target + configurable release. Guarantees output ≤ ceiling on sample-rate-detected peaks.',
+    },
+  },
+  params: {
+    [LIMITER_PARAM.CEILING_DB]: {
+      title: { ro: 'Ceiling', en: 'Ceiling' },
+      body: {
+        ro: { beginner: 'Maximul peste care output-ul nu poate trece. -1 dB e o margine de siguranță tipică (intersample peaks).', advanced: 'Limita peak în dBFS. -0.3 ... -1 dB e standard pentru a evita inter-sample peaks la conversia la mp3/aac.' },
+        en: { beginner: 'The hard ceiling for output. -1 dB is a typical safety margin (intersample peaks).', advanced: 'Peak ceiling in dBFS. -0.3 to -1 dB is standard for safety against intersample peaks during mp3/aac encoding.' },
+      },
+    },
+    [LIMITER_PARAM.RELEASE_MS]: {
+      title: { ro: 'Release', en: 'Release' },
+      body: {
+        ro: { beginner: 'Cât de repede revine limiter-ul după ce a "lovit". Prea rapid = pumping; prea lent = volum global mai mic.', advanced: 'Coeficient one-pole pentru release. 30-100 ms = transparent pe material muzical; sub 10 ms = pumping audibil pe lovituri repetate.' },
+        en: { beginner: 'How fast the limiter recovers after engaging. Too fast = pumping; too slow = lower overall loudness.', advanced: 'One-pole release coefficient. 30-100 ms = transparent on music; below 10 ms = audible pumping on repeated hits.' },
+      },
+    },
+    [LIMITER_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: { ro: { beginner: 'Blendează limiter-ul cu originalul.', advanced: 'Linear crossfade — la 100 % output e clamp-uit sub ceiling.' }, en: { beginner: 'Blends the limited signal with the original.', advanced: 'Linear crossfade — at 100 % the output is clamped under the ceiling.' } },
+    },
+  },
+}
+
+// ─── Delay ───────────────────────────────────────────────────────────────
+
+const DELAY_DOCS: EffectDocs = {
+  title: { ro: 'Delay', en: 'Delay' },
+  summary: {
+    ro: {
+      beginner: 'Repetă semnalul după un timp setabil. Cu feedback poți avea mai multe ecouri care se sting treptat. Filtrul Tone face ecourile să sune mai "tape", mai blânde.',
+      advanced: 'Single-tap echo cu circular buffer (linear interp.) și one-pole LP în feedback path pentru tape-emulation feel. Smoothing pe time/feedback pt. modulation tape-style.',
+    },
+    en: {
+      beginner: "Repeats the signal after a chosen time. With feedback you get multiple echoes fading away. The Tone filter makes echoes feel more 'tape'-like, softer.",
+      advanced: 'Single-tap echo with circular buffer (linear interp.) and a one-pole LP in the feedback path for tape-emulation feel. Smoothed time/feedback for tape-style modulation.',
+    },
+  },
+  params: {
+    [DELAY_PARAM.TIME_MS]: {
+      title: { ro: 'Time', en: 'Time' },
+      body: { ro: { beginner: 'Cât de departe în timp e ecoul. 250 ms ≈ optimă pentru o voce ritmică.', advanced: 'Echo time în ms. Smoothed pentru a evita pitch-shift abrupt la modificare.' }, en: { beginner: 'How far back the echo sits. 250 ms ≈ a sweet spot for rhythmic vocals.', advanced: 'Echo time in ms. Smoothed to avoid abrupt pitch-shifting when changed.' } },
+    },
+    [DELAY_PARAM.FEEDBACK]: {
+      title: { ro: 'Feedback', en: 'Feedback' },
+      body: { ro: { beginner: 'Câte repetiții auzi înainte să se stingă. 0 = un ecou; 0.95 = aproape la nesfârșit (atenție la self-oscillation).', advanced: 'Gain pe loop-back. Limitat la 0.95 pentru stabilitate. Cu LP în feedback, energia înaltelor se topește gradual.' }, en: { beginner: 'How many repeats before fade-out. 0 = single echo; 0.95 = nearly endless (watch for self-oscillation).', advanced: 'Loop-back gain. Capped at 0.95 for stability. With LP in feedback, high-frequency energy decays gradually.' } },
+    },
+    [DELAY_PARAM.TONE_HZ]: {
+      title: { ro: 'Tone', en: 'Tone' },
+      body: { ro: { beginner: 'Cât de luminos sună ecoul. Mai jos = ecou mai întunecat, ca pe bandă magnetică.', advanced: 'Cutoff one-pole LP în feedback path. La 6 kHz se simulează tape; la 18 kHz e digital clean.' }, en: { beginner: 'How bright the echo sounds. Lower = darker echo, tape-like.', advanced: 'One-pole LP cutoff in the feedback path. 6 kHz emulates tape; 18 kHz is digital clean.' } },
+    },
+    [DELAY_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: { ro: { beginner: 'Cât de tare e ecoul vs semnalul original.', advanced: 'Linear crossfade între dry și wet (echo + feedback chain).' }, en: { beginner: 'How loud the echo is vs the original signal.', advanced: 'Linear crossfade between dry and wet (echo + feedback chain).' } },
+    },
+  },
+}
+
+// ─── Reverb ──────────────────────────────────────────────────────────────
+
+const REVERB_DOCS: EffectDocs = {
+  title: { ro: 'Reverb', en: 'Reverb' },
+  summary: {
+    ro: {
+      beginner: 'Adaugă "spațiu" sunetului — ca și cum sunetul ar răsuna într-o cameră. Util pentru voce uscată, drums lipsite de spațiu.',
+      advanced: 'Schroeder-style algorithmic reverb (4 LP-feedback comb filters în paralel + 2 allpass în serie), cu predelay separat. Damping = LP în feedback comb-urilor.',
+    },
+    en: {
+      beginner: "Adds 'space' to the sound — like the sound resonating in a room. Useful for dry vocals, drums lacking depth.",
+      advanced: 'Schroeder-style algorithmic reverb (4 LP-feedback comb filters in parallel + 2 allpass in series), with a separate predelay. Damping = LP in the comb feedback path.',
+    },
+  },
+  params: {
+    [REVERB_PARAM.ROOM_SIZE]: {
+      title: { ro: 'Size', en: 'Size' },
+      body: { ro: { beginner: 'Cât de mare e camera virtuală. 0 = încăpere mică; 1 = sală mare.', advanced: 'Mapează la feedback-ul comb-urilor (0.5..0.97). Valori peste 0.95 ating self-oscillation = reverb infinit.' }, en: { beginner: 'How big the virtual room feels. 0 = small room; 1 = large hall.', advanced: 'Maps to comb feedback (0.5..0.97). Above 0.95 you reach self-oscillation = infinite reverb.' } },
+    },
+    [REVERB_PARAM.DAMPING]: {
+      title: { ro: 'Damping', en: 'Damping' },
+      body: { ro: { beginner: 'Cât de mult înghite camera frecvențele înalte. Mai mare = sună mai cald, mai "vechi".', advanced: 'Coef. LP în feedback-ul comb-urilor. Simulează absorbția HF pe materiale moi (covor, mobilier).' }, en: { beginner: 'How much the room absorbs high frequencies. Higher = warmer, more "vintage" sound.', advanced: 'LP coef in the comb feedback path. Simulates HF absorption by soft surfaces (carpet, furniture).' } },
+    },
+    [REVERB_PARAM.PRE_DELAY_MS]: {
+      title: { ro: 'PreDelay', en: 'PreDelay' },
+      body: { ro: { beginner: 'Cât așteaptă reverb-ul înainte să înceapă. 20-50 ms = vocea rămâne clară, reverb-ul vine după.', advanced: 'Delay separat în fața rețelei comb/allpass. Util pentru a separa atac-ul vocii de tail-ul reverb.' }, en: { beginner: "How long the reverb waits before starting. 20-50 ms = vocal stays upfront, reverb arrives after.", advanced: 'Separate delay in front of the comb/allpass network. Useful to keep the vocal attack distinct from the reverb tail.' } },
+    },
+    [REVERB_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: { ro: { beginner: 'Cât din reverb auzi vs semnal uscat. 20-30 % e tipic pentru voce.', advanced: 'Linear crossfade. Send-style mixing recomandat: trimite parallel către un canal Reverb cu wet=100% și controlează prin send.' }, en: { beginner: 'How much reverb vs dry signal. 20-30 % is typical on vocals.', advanced: 'Linear crossfade. Send-style mixing recommended: parallel-send to a Reverb channel at wet=100 % and control via send level.' } },
+    },
+  },
+}
+
+// ─── Saturation ──────────────────────────────────────────────────────────
+
+const SATURATION_DOCS: EffectDocs = {
+  title: { ro: 'Saturation', en: 'Saturation' },
+  summary: {
+    ro: {
+      beginner: 'Adaugă "căldură" sau "agresivitate" prin distorsiune. Drive controlează cât de mult; tipul (Tanh/Soft/Hard/Tube) decide caracterul.',
+      advanced: 'Memoryless waveshaper cu drive pre-gain, alegere între 4 curbe (tanh, polynomial soft clip, hard clip, asymmetric tube), LP post-shaper pentru anti-alias soft, level compensation empiric.',
+    },
+    en: {
+      beginner: "Adds 'warmth' or 'aggression' via distortion. Drive sets how much; the Type (Tanh/Soft/Hard/Tube) decides the character.",
+      advanced: 'Memoryless waveshaper with drive pre-gain, choice of 4 curves (tanh, polynomial soft clip, hard clip, asymmetric tube), post-shaper LP for soft anti-aliasing, empirical level compensation.',
+    },
+  },
+  params: {
+    [SATURATION_PARAM.DRIVE_DB]: {
+      title: { ro: 'Drive', en: 'Drive' },
+      body: { ro: { beginner: 'Cât de tare împingi semnalul în distorsiune. 0 = neschimbat; +18 dB = caracter clar.', advanced: 'Pre-gain dB înainte de shaping. La drive mare ai nevoie de Tone activ ca să tai aliasing-ul harmonic.' }, en: { beginner: "How hard you push the signal into distortion. 0 = unchanged; +18 dB = obvious character.", advanced: 'Pre-shaper gain in dB. At high drive you need Tone engaged to tame harmonic aliasing.' } },
+    },
+    [SATURATION_PARAM.TYPE]: {
+      title: { ro: 'Type', en: 'Type' },
+      body: { ro: { beginner: 'Forma curbei: Tanh = neted, Soft = polynomial, Hard = clipping clasic, Tube = asimetric (chip de tub).', advanced: 'Tanh: smooth, energie pe pare. Soft (cubic): edge-uri mai blânde. Hard: clip dur cu odd harmonics. Tube: pos vs neg diferit, even-harmonic flavour.' }, en: { beginner: 'Shape of the curve: Tanh = smooth, Soft = polynomial, Hard = classic clipping, Tube = asymmetric (tube-style).', advanced: 'Tanh: smooth, even-harmonic energy. Soft (cubic): gentler edges. Hard: brick clip, odd harmonics. Tube: pos vs neg differs, even-harmonic flavour.' } },
+    },
+    [SATURATION_PARAM.TONE_HZ]: {
+      title: { ro: 'Tone', en: 'Tone' },
+      body: { ro: { beginner: 'Cutoff-ul filtrului LP de după shaper. Mai jos = mai puține înalte agresive.', advanced: 'LP biquad post-shaper (Q=0.707). Setează în jur de 6-10 kHz la drive ridicat pentru a controla aliasing-ul.' }, en: { beginner: 'LP filter cutoff after the shaper. Lower = fewer aggressive highs.', advanced: 'LP biquad post-shaper (Q=0.707). Set around 6-10 kHz at high drive to keep aliasing under control.' } },
+    },
+    [SATURATION_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: { ro: { beginner: 'Blendează semnalul saturat cu cel original.', advanced: 'Linear crossfade pentru parallel saturation — păstrează transient-ele și adaugă densitate.' }, en: { beginner: 'Blends the saturated signal with the original.', advanced: 'Linear crossfade for parallel saturation — preserves transients while adding density.' } },
+    },
+  },
+}
+
 export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Gain]: GAIN_DOCS,
   [EffectType.Compressor]: COMPRESSOR_DOCS,
   [EffectType.ParametricEq]: EQ_DOCS,
+  [EffectType.Gate]: GATE_DOCS,
+  [EffectType.Limiter]: LIMITER_DOCS,
+  [EffectType.Delay]: DELAY_DOCS,
+  [EffectType.Reverb]: REVERB_DOCS,
+  [EffectType.Saturation]: SATURATION_DOCS,
 }
 
 import type { EducationLanguage, EducationMode } from '@/store/educationStore'

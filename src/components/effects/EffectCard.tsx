@@ -21,9 +21,19 @@ export function EffectCard({ instance, children }: EffectCardProps) {
       }`}
     >
       <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-100">{definition.label}</h3>
-          <p className="text-[11px] text-zinc-500">{definition.description}</p>
+        <div className="flex items-center gap-2">
+          <span
+            data-drag-handle
+            className="cursor-grab select-none text-base leading-none text-zinc-600 hover:text-zinc-400"
+            title="Drag to reorder"
+            aria-hidden
+          >
+            ⠿
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-100">{definition.label}</h3>
+            <p className="text-[11px] text-zinc-500">{definition.description}</p>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <button

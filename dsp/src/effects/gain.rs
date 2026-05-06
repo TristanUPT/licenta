@@ -41,13 +41,6 @@ impl Gain {
         }
     }
 
-    fn recompute_target_gain(&mut self, gain_db: f32) {
-        let mut g = db_to_lin(gain_db);
-        if self.phase_invert {
-            g = -g;
-        }
-        self.target_gain = g;
-    }
 }
 
 impl Effect for Gain {
