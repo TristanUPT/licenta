@@ -1,7 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useEffectsStore } from '@/store/effectsStore'
 import { useEducationStore } from '@/store/educationStore'
 import { analyzeAll, pickFeedback, type FeedbackEntry, type FeedbackSeverity } from '@/education/dynamicFeedback'
+import type { EffectInstance } from '@/types/effects'
+
+const FEEDBACK_DEBOUNCE_MS = 600
 
 const SEVERITY_STYLE: Record<FeedbackSeverity, string> = {
   info: 'border-zinc-700 bg-zinc-900/60 text-zinc-300',
@@ -15,14 +18,23 @@ const SEVERITY_BADGE: Record<FeedbackSeverity, { ro: string; en: string; cls: st
 }
 
 export function InfoPanel() {
-  const effects = useEffectsStore((s) => s.effects)
+  const liveEffects = useEffectsStore((s) => s.effects)
   const language = useEducationStore((s) => s.language)
   const feedbackVisible = useEducationStore((s) => s.feedbackVisible)
   const toggleFeedback = useEducationStore((s) => s.toggleFeedback)
 
-  const entries: FeedbackEntry[] = useMemo(() => analyzeAll(effects), [effects])
+  // Debounce the effects snapshot used for analysis so that rapid parameter
+  // changes during EQ dragging don't cause the feedback to flicker or pop in
+  // mid-gesture. The display updates 600 ms after the last param change.
+  const [stableEffects, setStableEffects] = useState<EffectInstance[]>(liveEffects)
+  useEffect(() => {
+    const id = setTimeout(() => setStableEffects(liveEffects), FEEDBACK_DEBOUNCE_MS)
+    return () => clearTimeout(id)
+  }, [liveEffects])
 
-  if (effects.length === 0) return null
+  const entries: FeedbackEntry[] = useMemo(() => analyzeAll(stableEffects), [stableEffects])
+
+  if (liveEffects.length === 0) return null
 
   const heading = language === 'ro' ? 'Feedback contextual' : 'Contextual feedback'
   const emptyText = language === 'ro'

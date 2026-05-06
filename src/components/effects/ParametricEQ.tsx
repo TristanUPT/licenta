@@ -29,7 +29,10 @@ export function ParametricEQ({ instance }: ParametricEQProps) {
   return (
     <EffectCard instance={instance}>
       <div className="mb-3 w-full">
-        <EQCurveDisplay instance={instance} />
+        <EQCurveDisplay
+          instance={instance}
+          onParamChange={(paramId, value) => setParam(instance.id, paramId, value)}
+        />
       </div>
       <div className="grid w-full grid-cols-4 gap-3">
         {bands.map((bandIdx) => {
