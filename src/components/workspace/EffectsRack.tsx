@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { useEffectsStore } from '@/store/effectsStore'
+import { usePresetStore } from '@/store/presetStore'
 import { EFFECT_DEFINITIONS, EffectType, type EffectInstance } from '@/types/effects'
 import { getStatus } from '@/audio/engine'
+import { PresetManager } from '@/components/workspace/PresetManager'
 import { Gain } from '@/components/effects/Gain'
 import { Compressor } from '@/components/effects/Compressor'
 import { ParametricEQ } from '@/components/effects/ParametricEQ'
@@ -34,6 +36,7 @@ export function EffectsRack() {
   const reorder = useEffectsStore((s) => s.reorder)
   const globalBypass = useEffectsStore((s) => s.globalBypass)
   const setGlobalBypass = useEffectsStore((s) => s.setGlobalBypass)
+  const clearActivePreset = usePresetStore((s) => s.setActivePresetId)
 
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,7 +65,10 @@ export function EffectsRack() {
 
   function handleDrop(i: number) {
     const from = dragIndexRef.current
-    if (from !== null && from !== i) reorder(from, i)
+    if (from !== null && from !== i) {
+      reorder(from, i)
+      clearActivePreset(null)
+    }
     dragIndexRef.current = null
     setOverIndex(null)
   }
@@ -80,6 +86,7 @@ export function EffectsRack() {
         return
       }
       addEffect(type)
+      clearActivePreset(null)
       setOpen(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -93,6 +100,7 @@ export function EffectsRack() {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
             Effects chain
           </h2>
+          <PresetManager />
           {effects.length > 0 && (
             <button
               onClick={() => setGlobalBypass(!globalBypass)}
