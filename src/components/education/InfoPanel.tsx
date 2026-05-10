@@ -20,6 +20,7 @@ const SEVERITY_BADGE: Record<FeedbackSeverity, { ro: string; en: string; cls: st
 export function InfoPanel() {
   const liveEffects = useEffectsStore((s) => s.effects)
   const language = useEducationStore((s) => s.language)
+  const mode = useEducationStore((s) => s.mode)
   const feedbackVisible = useEducationStore((s) => s.feedbackVisible)
   const toggleFeedback = useEducationStore((s) => s.toggleFeedback)
 
@@ -79,7 +80,7 @@ export function InfoPanel() {
                   {SEVERITY_BADGE[entry.severity][language]}
                 </span>
               </div>
-              <p>{pickFeedback(entry, language)}</p>
+              <p>{pickFeedback(entry, language, mode)}</p>
             </div>
           ))}
         </div>

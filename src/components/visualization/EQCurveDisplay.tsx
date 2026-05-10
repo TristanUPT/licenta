@@ -14,6 +14,7 @@ import {
   EQ_BAND_PARAM,
   EQ_BAND_TYPE,
   EQ_BANDS,
+  EQ_LOW_CUT_PARAM,
   eqParamId,
   type EffectInstance,
 } from '@/types/effects'
@@ -40,7 +41,7 @@ const NODE_R = 7            // node radius in viewBox units
 const BAND_COLORS: readonly string[] = ['#a855f7', '#22d3ee', '#10b981', '#f59e0b']
 
 // Band types that expose a gain parameter on the Y axis
-const HAS_GAIN_Y = new Set([
+const HAS_GAIN_Y: Set<number> = new Set([
   EQ_BAND_TYPE.Bell,
   EQ_BAND_TYPE.LowShelf,
   EQ_BAND_TYPE.HighShelf,
@@ -108,7 +109,7 @@ interface EQCurveDisplayProps {
 }
 
 interface DragState {
-  bandIdx: number
+  bandIdx: number    // -1 = Low Cut, 0-3 = parametric bands
   hasGain: boolean   // whether Y drag should update gain
 }
 
@@ -134,6 +135,8 @@ export function EQCurveDisplay({
 
   // ── Geometry computation ────────────────────────────────────────────────────
 
+  const LC_COLOR = '#f97316'  // orange-500 — Low Cut distinct from band colors
+
   const geo = useMemo(() => {
     const totLin = new Float32Array(N).fill(1)
     const bandPaths: { color: string; d: string }[] = []
@@ -142,6 +145,42 @@ export function EQCurveDisplay({
       bandIdx: number; x: number; y: number
       color: string; hasGain: boolean
     }[] = []
+
+    // ── Low Cut (HPF) — drawn first so band curves layer on top ───────────
+    const lcEnabled = (instance.params[EQ_LOW_CUT_PARAM.ENABLED] ?? 0) >= 0.5
+    if (lcEnabled) {
+      const lcFreq  = instance.params[EQ_LOW_CUT_PARAM.FREQ]  ?? 80
+      const lcSlope = Math.round(instance.params[EQ_LOW_CUT_PARAM.SLOPE] ?? 1)
+      // 12 dB/oct: single Butterworth biquad (Q=1/√2)
+      // 24 dB/oct: two cascaded biquads (4th-order Butterworth Q values)
+      const c1 = highPass(lcFreq, lcSlope >= 2 ? 0.5412 : 0.7071, sampleRate)
+      const c2 = lcSlope >= 2 ? highPass(lcFreq, 1.3066, sampleRate) : null
+
+      let d = ''
+      for (let i = 0; i < N; i++) {
+        const f = FREQ_GRID[i] as number
+        let mag = biquadMagnitude(c1, f, sampleRate)
+        if (c2) mag *= biquadMagnitude(c2, f, sampleRate)
+        totLin[i] = (totLin[i] as number) * mag
+        const db = 20 * Math.log10(Math.max(mag, 1e-9))
+        const sx = freqToX(f), sy = dbToY(db)
+        d += i === 0 ? `M ${sx.toFixed(1)} ${sy.toFixed(1)}`
+                     : ` L ${sx.toFixed(1)} ${sy.toFixed(1)}`
+      }
+      bandPaths.push({ color: LC_COLOR, d })
+      cutRects.push({ color: LC_COLOR, x: 0, w: freqToX(lcFreq) })
+
+      // Node at actual -3 dB point (cutoff freq of the cascaded filter)
+      let lcNodeMag = biquadMagnitude(c1, lcFreq, sampleRate)
+      if (c2) lcNodeMag *= biquadMagnitude(c2, lcFreq, sampleRate)
+      nodes.push({
+        bandIdx: -1,
+        x: freqToX(lcFreq),
+        y: dbToY(20 * Math.log10(Math.max(lcNodeMag, 1e-9))),
+        color: LC_COLOR,
+        hasGain: false,
+      })
+    }
 
     for (let b = 0; b < EQ_BANDS; b++) {
       const p = instance.params
@@ -174,8 +213,8 @@ export function EQCurveDisplay({
       if (typeR === EQ_BAND_TYPE.HighPass) cutRects.push({ color, x: 0, w: cx })
       if (typeR === EQ_BAND_TYPE.LowPass)  cutRects.push({ color, x: cx, w: W - cx })
 
-      // Node position: Notch sits at the 0-dB line; all others at the biquad
-      // magnitude evaluated at the band's own center/cutoff frequency.
+      // Node position: Notch sits at the 0-dB line; all others at biquad
+      // magnitude at the band's own center/cutoff frequency.
       const nodeX = freqToX(freq)
       const nodeY = typeR === EQ_BAND_TYPE.Notch
         ? dbToY(0)
@@ -209,12 +248,18 @@ export function EQCurveDisplay({
     if (!drag || !svgRef.current) return
     const { x, y } = toSvg(e.clientX, e.clientY, svgRef.current)
 
-    const newFreq = Math.max(F_MIN, Math.min(F_MAX, xToFreq(x)))
-    cbRef.current?.(eqParamId(drag.bandIdx, EQ_BAND_PARAM.FREQ), newFreq)
+    if (drag.bandIdx === -1) {
+      // Low Cut: X-only drag, clamped to its frequency range
+      const newFreq = Math.max(20, Math.min(600, xToFreq(x)))
+      cbRef.current?.(EQ_LOW_CUT_PARAM.FREQ, newFreq)
+    } else {
+      const newFreq = Math.max(F_MIN, Math.min(F_MAX, xToFreq(x)))
+      cbRef.current?.(eqParamId(drag.bandIdx, EQ_BAND_PARAM.FREQ), newFreq)
 
-    if (drag.hasGain) {
-      const newGain = Math.max(-DB_RANGE, Math.min(DB_RANGE, yToDb(y)))
-      cbRef.current?.(eqParamId(drag.bandIdx, EQ_BAND_PARAM.GAIN), newGain)
+      if (drag.hasGain) {
+        const newGain = Math.max(-DB_RANGE, Math.min(DB_RANGE, yToDb(y)))
+        cbRef.current?.(eqParamId(drag.bandIdx, EQ_BAND_PARAM.GAIN), newGain)
+      }
     }
   }
 
@@ -255,9 +300,11 @@ export function EQCurveDisplay({
     ? geo.nodes.find(n => n.bandIdx === dragBandIdx) ?? null
     : null
   const dragFreq = dragBandIdx != null
-    ? (instance.params[eqParamId(dragBandIdx, EQ_BAND_PARAM.FREQ)] ?? 1_000)
+    ? dragBandIdx === -1
+      ? (instance.params[EQ_LOW_CUT_PARAM.FREQ] ?? 80)
+      : (instance.params[eqParamId(dragBandIdx, EQ_BAND_PARAM.FREQ)] ?? 1_000)
     : 0
-  const dragGain = dragBandIdx != null
+  const dragGain = dragBandIdx != null && dragBandIdx !== -1
     ? (instance.params[eqParamId(dragBandIdx, EQ_BAND_PARAM.GAIN)] ?? 0)
     : 0
 

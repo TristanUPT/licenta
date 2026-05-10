@@ -244,11 +244,46 @@ function makeBandParams(bandIndex: number): ParamSchema[] {
   ]
 }
 
+// Low Cut (HPF) — param IDs after the 4 bands: 4 × 5 = 20
+export const EQ_LOW_CUT_PARAM = {
+  ENABLED: 20,
+  FREQ: 21,
+  SLOPE: 22,  // 1 = 12 dB/oct, 2 = 24 dB/oct
+} as const
+
+const LOW_CUT_SLOPE_OPTIONS = [
+  { value: 1, label: '12' },
+  { value: 2, label: '24' },
+]
+
 export const EQ_DEFINITION: EffectDefinition = {
   type: EffectType.ParametricEq,
   label: 'Parametric EQ',
-  description: '4-band equaliser. Each band can be bell, shelf, pass, or notch.',
-  params: [0, 1, 2, 3].flatMap(makeBandParams),
+  description: '4-band equaliser with Low Cut. Each band can be bell, shelf, pass, or notch.',
+  params: [
+    ...[0, 1, 2, 3].flatMap(makeBandParams),
+    {
+      id: EQ_LOW_CUT_PARAM.ENABLED,
+      label: 'Low Cut',
+      description: 'Enable / disable the Low Cut (high-pass) filter.',
+      min: 0, max: 1, default: 0, scale: 'boolean' as const,
+      format: (v: number) => v >= 0.5 ? 'on' : 'off',
+    },
+    {
+      id: EQ_LOW_CUT_PARAM.FREQ,
+      label: 'LC Freq',
+      description: 'Low Cut cutoff frequency — attenuates everything below this.',
+      min: 20, max: 600, default: 80, unit: 'Hz', scale: 'log' as const,
+      format: (v: number) => `${v.toFixed(0)}`,
+    },
+    {
+      id: EQ_LOW_CUT_PARAM.SLOPE,
+      label: 'LC Slope',
+      description: 'Filter slope in dB/octave. 12 = gentle, 24 = steep.',
+      min: 1, max: 2, default: 1, scale: 'enum' as const,
+      options: LOW_CUT_SLOPE_OPTIONS,
+    },
+  ],
 }
 
 // ─── Gate ────────────────────────────────────────────────────────────────

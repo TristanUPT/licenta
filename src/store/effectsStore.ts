@@ -11,11 +11,14 @@ interface EffectsState {
   effects: EffectInstance[]
   /** Monotonic id counter. */
   nextId: number
+  /** Global bypass — passes signal through unprocessed, preserving per-effect bypass states. */
+  globalBypass: boolean
 
   addEffect: (type: EffectType) => EffectInstance
   removeEffect: (id: number) => void
   setParam: (id: number, paramId: number, value: number) => void
   setBypass: (id: number, bypassed: boolean) => void
+  setGlobalBypass: (bypassed: boolean) => void
   reorder: (fromIndex: number, toIndex: number) => void
   clear: () => void
 }
@@ -32,6 +35,7 @@ export const useEffectsStore = create<EffectsState>()(
     (set, get) => ({
       effects: [],
       nextId: 1,
+      globalBypass: false,
 
       addEffect: (type) => {
         const id = get().nextId
@@ -84,6 +88,11 @@ export const useEffectsStore = create<EffectsState>()(
           undefined,
           'effects/setBypass',
         )
+      },
+
+      setGlobalBypass: (bypassed) => {
+        engine.setGlobalBypass(bypassed)
+        set({ globalBypass: bypassed }, undefined, 'effects/setGlobalBypass')
       },
 
       reorder: (fromIndex, toIndex) => {

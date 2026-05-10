@@ -190,6 +190,10 @@ export function setBypass(instanceId: number, bypassed: boolean): void {
   postOrThrow({ type: 'set_bypass', instanceId, bypassed })
 }
 
+export function setGlobalBypass(bypassed: boolean): void {
+  postOrThrow({ type: 'set_global_bypass', bypassed })
+}
+
 export function reorderEffects(order: number[]): void {
   postOrThrow({ type: 'reorder', order })
 }

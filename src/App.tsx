@@ -6,9 +6,10 @@ import { useEducationStore } from '@/store/educationStore'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
-import { SpectrumAnalyzer } from '@/components/visualization/SpectrumAnalyzer'
+import { VisualizerPanel } from '@/components/visualization/VisualizerPanel'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
 import { InfoPanel } from '@/components/education/InfoPanel'
+import { RecommendationsPanel } from '@/components/education/RecommendationsPanel'
 
 const STATUS_LABEL: Record<EngineStatus, string> = {
   idle: 'idle',
@@ -82,8 +83,9 @@ function App() {
         {currentFile ? (
           <>
             <WaveformView />
-            <SpectrumAnalyzer />
+            <VisualizerPanel />
             <InfoPanel />
+            <RecommendationsPanel />
             <EffectsRack />
           </>
         ) : (

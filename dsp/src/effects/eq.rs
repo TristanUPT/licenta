@@ -44,6 +44,11 @@ pub const BAND_PARAM_GAIN: u32 = 2;
 pub const BAND_PARAM_Q: u32 = 3;
 pub const BAND_PARAM_ENABLED: u32 = 4;
 
+/// Low Cut (HPF) — param IDs after the 4 bands (4 × 5 = 20).
+pub const LOW_CUT_PARAM_ENABLED: u32 = 20;
+pub const LOW_CUT_PARAM_FREQ: u32 = 21;
+pub const LOW_CUT_PARAM_SLOPE: u32 = 22; // 1 = 12 dB/oct, 2 = 24 dB/oct
+
 /// Compute the param id for `band_index` (0-based) and `local_offset`.
 #[inline]
 pub const fn band_param(band_index: u32, local: u32) -> u32 {
@@ -88,6 +93,11 @@ impl Band {
 pub struct ParametricEq {
     sample_rate: f32,
     bands: [Band; NUM_BANDS],
+    low_cut_enabled: bool,
+    low_cut_freq: f32,
+    low_cut_slope: u8,   // 1 = 12 dB/oct, 2 = 24 dB/oct
+    low_cut_bq1: Biquad,
+    low_cut_bq2: Biquad, // second stage for 24 dB/oct
 }
 
 impl ParametricEq {
@@ -98,7 +108,30 @@ impl ParametricEq {
             Band::new(2_500.0), // band 2 — presence
             Band::new(8_000.0), // band 3 — air
         ];
-        Self { sample_rate, bands }
+        let mut eq = Self {
+            sample_rate,
+            bands,
+            low_cut_enabled: false,
+            low_cut_freq: 80.0,
+            low_cut_slope: 1,
+            low_cut_bq1: Biquad::new(BiquadCoeffs::PASSTHROUGH),
+            low_cut_bq2: Biquad::new(BiquadCoeffs::PASSTHROUGH),
+        };
+        eq.recompute_low_cut();
+        eq
+    }
+
+    fn recompute_low_cut(&mut self) {
+        let f = self.low_cut_freq;
+        let sr = self.sample_rate;
+        if self.low_cut_slope >= 2 {
+            // 4th-order Butterworth: two cascaded biquads with different Q values
+            self.low_cut_bq1.set_coeffs(highpass(f, 0.5412, sr));
+            self.low_cut_bq2.set_coeffs(highpass(f, 1.3066, sr));
+        } else {
+            // 2nd-order Butterworth (Q = 1/√2)
+            self.low_cut_bq1.set_coeffs(highpass(f, core::f32::consts::FRAC_1_SQRT_2, sr));
+        }
     }
 }
 
@@ -107,6 +140,12 @@ impl Effect for ParametricEq {
         let n = input.len().min(output.len());
         for i in 0..n {
             let mut x = input[i];
+            if self.low_cut_enabled {
+                x = self.low_cut_bq1.process_sample(x);
+                if self.low_cut_slope >= 2 {
+                    x = self.low_cut_bq2.process_sample(x);
+                }
+            }
             for band in &mut self.bands {
                 if band.enabled {
                     x = band.biquad.process_sample(x);
@@ -117,33 +156,48 @@ impl Effect for ParametricEq {
     }
 
     fn set_param(&mut self, param_id: u32, value: f32) {
-        let band_idx = (param_id / PARAMS_PER_BAND) as usize;
-        if band_idx >= NUM_BANDS {
-            return;
-        }
-        let local = param_id % PARAMS_PER_BAND;
-        let band = &mut self.bands[band_idx];
-        match local {
-            BAND_PARAM_TYPE => {
-                band.band_type = BandType::from_f32(value);
-                band.recompute(self.sample_rate);
+        match param_id {
+            LOW_CUT_PARAM_ENABLED => {
+                self.low_cut_enabled = value >= 0.5;
             }
-            BAND_PARAM_FREQ => {
-                band.freq_hz = value.clamp(20.0, 20_000.0);
-                band.recompute(self.sample_rate);
+            LOW_CUT_PARAM_FREQ => {
+                self.low_cut_freq = value.clamp(20.0, 600.0);
+                self.recompute_low_cut();
             }
-            BAND_PARAM_GAIN => {
-                band.gain_db = value.clamp(-24.0, 24.0);
-                band.recompute(self.sample_rate);
+            LOW_CUT_PARAM_SLOPE => {
+                self.low_cut_slope = (value.round() as u8).clamp(1, 2);
+                self.recompute_low_cut();
             }
-            BAND_PARAM_Q => {
-                band.q = value.clamp(0.1, 18.0);
-                band.recompute(self.sample_rate);
+            _ => {
+                let band_idx = (param_id / PARAMS_PER_BAND) as usize;
+                if band_idx >= NUM_BANDS {
+                    return;
+                }
+                let local = param_id % PARAMS_PER_BAND;
+                let band = &mut self.bands[band_idx];
+                match local {
+                    BAND_PARAM_TYPE => {
+                        band.band_type = BandType::from_f32(value);
+                        band.recompute(self.sample_rate);
+                    }
+                    BAND_PARAM_FREQ => {
+                        band.freq_hz = value.clamp(20.0, 20_000.0);
+                        band.recompute(self.sample_rate);
+                    }
+                    BAND_PARAM_GAIN => {
+                        band.gain_db = value.clamp(-24.0, 24.0);
+                        band.recompute(self.sample_rate);
+                    }
+                    BAND_PARAM_Q => {
+                        band.q = value.clamp(0.1, 18.0);
+                        band.recompute(self.sample_rate);
+                    }
+                    BAND_PARAM_ENABLED => {
+                        band.enabled = value >= 0.5;
+                    }
+                    _ => {}
+                }
             }
-            BAND_PARAM_ENABLED => {
-                band.enabled = value >= 0.5;
-            }
-            _ => {}
         }
     }
 
@@ -151,6 +205,8 @@ impl Effect for ParametricEq {
         for band in &mut self.bands {
             band.biquad.reset();
         }
+        self.low_cut_bq1.reset();
+        self.low_cut_bq2.reset();
     }
 }
 

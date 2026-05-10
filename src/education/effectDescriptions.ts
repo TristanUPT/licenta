@@ -10,6 +10,7 @@ import {
   COMPRESSOR_PARAM,
   DELAY_PARAM,
   EQ_BAND_PARAM,
+  EQ_LOW_CUT_PARAM,
   EQ_PARAMS_PER_BAND,
   EffectType,
   GAIN_PARAM,
@@ -396,6 +397,46 @@ const EQ_DOCS: EffectDocs = {
       params[base + EQ_BAND_PARAM.GAIN] = eqBandGainDocs()
       params[base + EQ_BAND_PARAM.Q] = eqBandQDocs()
       params[base + EQ_BAND_PARAM.ENABLED] = eqBandEnabledDocs()
+    }
+    // Low Cut params
+    params[EQ_LOW_CUT_PARAM.ENABLED] = {
+      title: { ro: 'Low Cut', en: 'Low Cut' },
+      body: {
+        ro: {
+          beginner: 'Activează filtrul care taie frecvențele joase nedorite (zgomot de cameră, bâzâit de microfon). Util pe aproape orice semnal.',
+          advanced: 'Activează HPF procesat înaintea benzilor parametrice. 12 dB/oct = un biquad Butterworth (Q=0.707); 24 dB/oct = două biquad-uri cascadate (Q=0.541 + Q=1.306).',
+        },
+        en: {
+          beginner: 'Enables the filter that removes unwanted low frequencies (room rumble, mic noise). Useful on almost any signal.',
+          advanced: 'Activates the HPF processed before the parametric bands. 12 dB/oct = single Butterworth biquad (Q=0.707); 24 dB/oct = two cascaded biquads (Q=0.541 + Q=1.306).',
+        },
+      },
+    }
+    params[EQ_LOW_CUT_PARAM.FREQ] = {
+      title: { ro: 'LC Freq', en: 'LC Freq' },
+      body: {
+        ro: {
+          beginner: 'Frecvența de tăiere. Tot ce e sub ea e atenuat. 80-120 Hz tipic pe voce; 30-60 Hz pe instrumente. Trage nodul portocaliu din display pentru a ajusta.',
+          advanced: 'Cutoff în Hz (20-600). Scală log. La 24 dB/oct, acesta e punctul -3 dB al filtrului Butterworth de ord. 4; la 12 dB/oct, punctul -3 dB al Butterworth ord. 2.',
+        },
+        en: {
+          beginner: 'Cutoff frequency — everything below is attenuated. 80-120 Hz typical for vocals; 30-60 Hz for instruments. Drag the orange node in the display to adjust.',
+          advanced: 'Cutoff in Hz (20-600). Log scale. At 24 dB/oct this is the -3 dB point of the 4th-order Butterworth; at 12 dB/oct, the -3 dB point of the 2nd-order Butterworth.',
+        },
+      },
+    }
+    params[EQ_LOW_CUT_PARAM.SLOPE] = {
+      title: { ro: 'LC Slope', en: 'LC Slope' },
+      body: {
+        ro: {
+          beginner: 'Cât de abrupt e filtrul. 12 dB/oct = tăiere graduală, mai naturală. 24 dB/oct = tăiere mai bruscă, mai curată. Diferența se aude clar sub 200 Hz.',
+          advanced: '12 dB/oct = biquad Butterworth de ord. 2 (-3 dB la cutoff). 24 dB/oct = două biquad-uri cascadate, răspuns Butterworth de ord. 4. Diferența de pantă: 12 dB per octavă sub cutoff.',
+        },
+        en: {
+          beginner: 'How steeply the filter cuts. 12 dB/oct = gradual, more natural. 24 dB/oct = steeper, cleaner. The difference is clearly audible below 200 Hz.',
+          advanced: '12 dB/oct = 2nd-order Butterworth biquad (-3 dB at cutoff). 24 dB/oct = two cascaded biquads, 4th-order Butterworth response. Slope difference: 12 dB per octave below cutoff.',
+        },
+      },
     }
     return params
   })(),

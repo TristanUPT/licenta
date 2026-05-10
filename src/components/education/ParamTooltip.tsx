@@ -40,7 +40,9 @@ export function ParamTooltip({ effectType, paramId, children }: ParamTooltipProp
                 {title}
               </span>
               <span className="text-[10px] uppercase tracking-wider text-zinc-500">
-                {mode === 'beginner' ? '· basic' : '· advanced'}
+                {mode === 'beginner'
+                  ? (language === 'ro' ? '· începător' : '· beginner')
+                  : (language === 'ro' ? '· avansat'   : '· advanced')}
               </span>
             </div>
             <p className="text-zinc-300">{body}</p>

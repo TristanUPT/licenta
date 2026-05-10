@@ -11,6 +11,7 @@ class DspProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.ready = false;
+    this.globalBypassed = false;
     this.wasm = null;
     this.enginePtr = 0;
     this.inputPtr = 0;
@@ -49,6 +50,9 @@ class DspProcessor extends AudioWorkletProcessor {
           break;
         case 'set_bypass':
           if (this.ready) this.wasm.engine_set_bypass(this.enginePtr, msg.instanceId, msg.bypassed ? 1 : 0);
+          break;
+        case 'set_global_bypass':
+          this.globalBypassed = !!msg.bypassed;
           break;
         case 'reorder':
           if (this.ready) this._reorder(msg.order);
@@ -111,6 +115,16 @@ class DspProcessor extends AudioWorkletProcessor {
     if (!output || output.length === 0) return true;
 
     if (this.inputView.length === 0) this._refreshViews();
+
+    if (this.globalBypassed) {
+      // Pass-through: copy input channels directly to output (preserve stereo).
+      for (let ch = 0; ch < output.length; ch++) {
+        const inCh = input && input[Math.min(ch, (input.length || 1) - 1)];
+        if (inCh && inCh.length > 0) output[ch].set(inCh);
+        else output[ch].fill(0);
+      }
+      return true;
+    }
 
     if (input && input.length > 0 && input[0] && input[0].length > 0) {
       const ch0 = input[0];

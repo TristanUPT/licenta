@@ -21,7 +21,7 @@ import {
   eqParamId,
   type EffectInstance,
 } from '@/types/effects'
-import type { EducationLanguage } from '@/store/educationStore'
+import type { EducationLanguage, EducationMode } from '@/store/educationStore'
 
 export type FeedbackSeverity = 'info' | 'warning' | 'critical'
 
@@ -30,8 +30,8 @@ export interface FeedbackEntry {
   severity: FeedbackSeverity
   /** Effect IDs this feedback references (for highlight in UI). */
   effectIds: number[]
-  ro: string
-  en: string
+  ro: { beginner: string; advanced: string }
+  en: { beginner: string; advanced: string }
 }
 
 const SEVERITY_RANK: Record<FeedbackSeverity, number> = {
@@ -73,8 +73,14 @@ function analyzeCompressor(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:comp-as-limiter`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 cu attack ${attack.toFixed(1)} ms — practic e un *limiter*. Util pentru a prinde peak-uri scurte, dar elimină dinamica naturală.`,
-      en: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 with attack ${attack.toFixed(1)} ms — this is effectively a *limiter*. Useful for catching short peaks, but removes natural dynamics.`,
+      ro: {
+        beginner: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 cu attack ${attack.toFixed(1)} ms funcționează ca un limiter — prinde și vârfurile scurte. Util, dar elimină naturalețea sunetului.`,
+        advanced: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 cu attack ${attack.toFixed(1)} ms — practic e un *limiter*. Util pentru a prinde peak-uri scurte, dar elimină dinamica naturală.`,
+      },
+      en: {
+        beginner: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 with ${attack.toFixed(1)} ms attack acts as a limiter — it catches even short peaks. Useful, but removes the natural feel of the sound.`,
+        advanced: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 with attack ${attack.toFixed(1)} ms — this is effectively a *limiter*. Useful for catching short peaks, but removes natural dynamics.`,
+      },
     })
   }
 
@@ -83,8 +89,14 @@ function analyzeCompressor(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:comp-very-gentle`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 e foarte gentle — comprimă doar peak-urile cele mai mari. Tipic pentru *bus compression* sau "glue".`,
-      en: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 is very gentle — only the loudest peaks get compressed. Typical for *bus compression* or "glue".`,
+      ro: {
+        beginner: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 e foarte ușor — "lipește" ușor sunetele fără a schimba prea mult dinamica. Bun pentru un sunet mai coeziv.`,
+        advanced: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 e foarte gentle — comprimă doar peak-urile cele mai mari. Tipic pentru *bus compression* sau "glue".`,
+      },
+      en: {
+        beginner: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 is very gentle — it "glues" sounds together without changing the feel much. Good for a more cohesive result.`,
+        advanced: `Compressor #${effect.id}: ratio ${ratio.toFixed(1)}:1 is very gentle — only the loudest peaks get compressed. Typical for *bus compression* or "glue".`,
+      },
     })
   }
 
@@ -93,8 +105,14 @@ function analyzeCompressor(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:comp-pumping-risk`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Compressor #${effect.id}: release ${release.toFixed(0)} ms e foarte rapid — risc de "pumping" audibil pe material muzical susținut. Tipic 80-200 ms pe voce, 200-400 ms pe bus.`,
-      en: `Compressor #${effect.id}: release ${release.toFixed(0)} ms is very fast — risks audible "pumping" on sustained material. Typical 80-200 ms on vocals, 200-400 ms on buses.`,
+      ro: {
+        beginner: `Compressor #${effect.id}: release ${release.toFixed(0)} ms e prea rapid — vei auzi sunetul "pompând" (crând și scăzând ritmic). Încearcă 80-200 ms pe voce sau 200-400 ms pe grup de instrumente.`,
+        advanced: `Compressor #${effect.id}: release ${release.toFixed(0)} ms e foarte rapid — risc de "pumping" audibil pe material muzical susținut. Tipic 80-200 ms pe voce, 200-400 ms pe bus.`,
+      },
+      en: {
+        beginner: `Compressor #${effect.id}: release ${release.toFixed(0)} ms is too fast — you'll hear the sound "pumping" (volume rising and falling rhythmically). Try 80-200 ms on vocals, 200-400 ms on a mix bus.`,
+        advanced: `Compressor #${effect.id}: release ${release.toFixed(0)} ms is very fast — risks audible "pumping" on sustained material. Typical 80-200 ms on vocals, 200-400 ms on buses.`,
+      },
     })
   }
 
@@ -103,8 +121,14 @@ function analyzeCompressor(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:comp-release-too-slow`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Compressor #${effect.id}: release ${release.toFixed(0)} ms e foarte lent — compressor-ul nu se redeschide la timp pentru următoarea frază, semnalul rămâne "stuck" sub threshold.`,
-      en: `Compressor #${effect.id}: release ${release.toFixed(0)} ms is very slow — the compressor won't reopen in time for the next phrase, signal stays "stuck" under threshold.`,
+      ro: {
+        beginner: `Compressor #${effect.id}: release ${release.toFixed(0)} ms e prea lent — compresorul nu se redeschide la timp între fraze și semnalul rămâne "strâns" tot timpul. Încearcă 100-400 ms.`,
+        advanced: `Compressor #${effect.id}: release ${release.toFixed(0)} ms e foarte lent — compressor-ul nu se redeschide la timp pentru următoarea frază, semnalul rămâne "stuck" sub threshold.`,
+      },
+      en: {
+        beginner: `Compressor #${effect.id}: release ${release.toFixed(0)} ms is too slow — the compressor doesn't reopen between phrases, keeping the signal permanently "squashed". Try 100-400 ms.`,
+        advanced: `Compressor #${effect.id}: release ${release.toFixed(0)} ms is very slow — the compressor won't reopen in time for the next phrase, signal stays "stuck" under threshold.`,
+      },
     })
   }
 
@@ -113,8 +137,14 @@ function analyzeCompressor(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:comp-threshold-too-high`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Compressor #${effect.id}: threshold ${threshold.toFixed(1)} dB e foarte aproape de 0 dBFS — compresorul aproape nu acționează. Coboară-l pentru a vedea gain reduction.`,
-      en: `Compressor #${effect.id}: threshold ${threshold.toFixed(1)} dB is close to 0 dBFS — the compressor barely acts. Lower it to see gain reduction.`,
+      ro: {
+        beginner: `Compressor #${effect.id}: threshold ${threshold.toFixed(1)} dB e prea sus — compresorul aproape nu face nimic. Coboară-l până când meterele arată o reducere de 3-6 dB.`,
+        advanced: `Compressor #${effect.id}: threshold ${threshold.toFixed(1)} dB e foarte aproape de 0 dBFS — compresorul aproape nu acționează. Coboară-l pentru a vedea gain reduction.`,
+      },
+      en: {
+        beginner: `Compressor #${effect.id}: threshold at ${threshold.toFixed(1)} dB is too high — the compressor barely does anything. Lower it until the meters show 3-6 dB of reduction.`,
+        advanced: `Compressor #${effect.id}: threshold ${threshold.toFixed(1)} dB is close to 0 dBFS — the compressor barely acts. Lower it to see gain reduction.`,
+      },
     })
   }
 
@@ -123,8 +153,14 @@ function analyzeCompressor(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:comp-hard-knee-aggressive`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Compressor #${effect.id}: knee 0 dB + ratio ${ratio.toFixed(1)}:1 — comportament "brick wall" abrupt. Adaugă knee 6-12 dB pentru o tranziție muzicală.`,
-      en: `Compressor #${effect.id}: knee 0 dB + ratio ${ratio.toFixed(1)}:1 — abrupt "brick wall" behaviour. Add 6-12 dB knee for a musical transition.`,
+      ro: {
+        beginner: `Compressor #${effect.id}: knee 0 dB + ratio ${ratio.toFixed(1)}:1 = compresie bruscă și agresivă, poate suna artificial. Adaugă 6-12 dB la Knee pentru un rezultat mai natural.`,
+        advanced: `Compressor #${effect.id}: knee 0 dB + ratio ${ratio.toFixed(1)}:1 — comportament "brick wall" abrupt. Adaugă knee 6-12 dB pentru o tranziție muzicală.`,
+      },
+      en: {
+        beginner: `Compressor #${effect.id}: knee 0 dB + ratio ${ratio.toFixed(1)}:1 = abrupt, aggressive compression that can sound unnatural. Add 6-12 dB of Knee for a more musical feel.`,
+        advanced: `Compressor #${effect.id}: knee 0 dB + ratio ${ratio.toFixed(1)}:1 — abrupt "brick wall" behaviour. Add 6-12 dB knee for a musical transition.`,
+      },
     })
   }
 
@@ -133,8 +169,14 @@ function analyzeCompressor(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:comp-makeup-extreme`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Compressor #${effect.id}: makeup +${makeup.toFixed(1)} dB e extrem — vei urca semnalul artificial de mult. Verifică nivelul de output cu un limiter.`,
-      en: `Compressor #${effect.id}: makeup +${makeup.toFixed(1)} dB is extreme — you're boosting the signal heavily. Check output with a limiter.`,
+      ro: {
+        beginner: `Compressor #${effect.id}: makeup +${makeup.toFixed(1)} dB e foarte mare — amplifici excesiv semnalul după compresie. Verifică că nu clipează ieșirea (adaugă un Limiter după).`,
+        advanced: `Compressor #${effect.id}: makeup +${makeup.toFixed(1)} dB e extrem — vei urca semnalul artificial de mult. Verifică nivelul de output cu un limiter.`,
+      },
+      en: {
+        beginner: `Compressor #${effect.id}: makeup +${makeup.toFixed(1)} dB is very high — you're boosting the signal heavily after compression. Check that the output isn't clipping (add a Limiter after).`,
+        advanced: `Compressor #${effect.id}: makeup +${makeup.toFixed(1)} dB is extreme — you're boosting the signal heavily. Check output with a limiter.`,
+      },
     })
   }
 
@@ -161,8 +203,14 @@ function analyzeEq(effect: EffectInstance): FeedbackEntry[] {
         id: `${effect.id}:eq-band${band}-wide-boost`,
         severity: 'warning',
         effectIds: [effect.id],
-        ro: `EQ #${effect.id} banda ${band + 1}: boost +${gain.toFixed(1)} dB pe Q ${q.toFixed(1)} (lățime mare) — riscă să sune harsh / clipping. Crește Q pentru o intervenție mai chirurgicală.`,
-        en: `EQ #${effect.id} band ${band + 1}: +${gain.toFixed(1)} dB at Q ${q.toFixed(1)} (wide) — likely to sound harsh / clip. Increase Q for surgical work.`,
+        ro: {
+          beginner: `EQ #${effect.id} banda ${band + 1}: ridici +${gain.toFixed(1)} dB pe o bandă largă — poate suna strident sau poate apărea distorsiune. Coboară sub +9 dB sau crește Q-ul pentru o zonă mai strâmtă.`,
+          advanced: `EQ #${effect.id} banda ${band + 1}: boost +${gain.toFixed(1)} dB pe Q ${q.toFixed(1)} (lățime mare) — riscă să sune harsh / clipping. Crește Q pentru o intervenție mai chirurgicală.`,
+        },
+        en: {
+          beginner: `EQ #${effect.id} band ${band + 1}: boosting +${gain.toFixed(1)} dB over a wide area — may sound harsh or introduce clipping. Keep below +9 dB or raise Q to narrow the affected range.`,
+          advanced: `EQ #${effect.id} band ${band + 1}: +${gain.toFixed(1)} dB at Q ${q.toFixed(1)} (wide) — likely to sound harsh / clip. Increase Q for surgical work.`,
+        },
       })
     }
     if (gain < -18) {
@@ -170,28 +218,44 @@ function analyzeEq(effect: EffectInstance): FeedbackEntry[] {
         id: `${effect.id}:eq-band${band}-deep-cut`,
         severity: 'info',
         effectIds: [effect.id],
-        ro: `EQ #${effect.id} banda ${band + 1}: cut ${gain.toFixed(1)} dB e foarte adânc. Pentru rezonanțe punctuale, un Notch ar fi mai eficient.`,
-        en: `EQ #${effect.id} band ${band + 1}: ${gain.toFixed(1)} dB cut is very deep. For point resonances, a Notch would be more effective.`,
+        ro: {
+          beginner: `EQ #${effect.id} banda ${band + 1}: cut ${gain.toFixed(1)} dB e foarte adânc. Dacă vrei să elimini o frecvență specifică, tipul Notch cu Q mare e mai eficient.`,
+          advanced: `EQ #${effect.id} banda ${band + 1}: cut ${gain.toFixed(1)} dB e foarte adânc. Pentru rezonanțe punctuale, un Notch ar fi mai eficient.`,
+        },
+        en: {
+          beginner: `EQ #${effect.id} band ${band + 1}: ${gain.toFixed(1)} dB is a very deep cut. If you're targeting a specific resonance, switching to Notch type with a high Q is more effective.`,
+          advanced: `EQ #${effect.id} band ${band + 1}: ${gain.toFixed(1)} dB cut is very deep. For point resonances, a Notch would be more effective.`,
+        },
       })
     }
     if ((bandType === 1 || bandType === 2) && q > 3) {
-      // shelf with very high Q — produces overshoot/ringing
       out.push({
         id: `${effect.id}:eq-band${band}-shelf-high-q`,
         severity: 'info',
         effectIds: [effect.id],
-        ro: `EQ #${effect.id} banda ${band + 1}: shelf cu Q ${q.toFixed(1)} produce un "umflătură" la cutoff (Gibbs-like ringing). Pentru shelf curat, păstrează Q în jur de 0.7.`,
-        en: `EQ #${effect.id} band ${band + 1}: shelf at Q ${q.toFixed(1)} produces a bump at the cutoff (Gibbs-like ringing). Keep shelf Q near 0.7 for a clean response.`,
+        ro: {
+          beginner: `EQ #${effect.id} banda ${band + 1}: shelf cu Q ${q.toFixed(1)} produce o "umflătură" audibilă la frecvența de tăiere. Setează Q la 0.7 pentru un shelf curat, fără artefacte.`,
+          advanced: `EQ #${effect.id} banda ${band + 1}: shelf cu Q ${q.toFixed(1)} produce un "umflătură" la cutoff (Gibbs-like ringing). Pentru shelf curat, păstrează Q în jur de 0.7.`,
+        },
+        en: {
+          beginner: `EQ #${effect.id} band ${band + 1}: shelf at Q ${q.toFixed(1)} creates an audible bump at the cutoff frequency. Set Q to 0.7 for a clean shelf without artefacts.`,
+          advanced: `EQ #${effect.id} band ${band + 1}: shelf at Q ${q.toFixed(1)} produces a bump at the cutoff (Gibbs-like ringing). Keep shelf Q near 0.7 for a clean response.`,
+        },
       })
     }
     if ((bandType === 3 || bandType === 4) && Math.abs(gain) > 0.1) {
-      // HPF/LPF with non-zero gain set (no effect, but might be confusing)
       out.push({
         id: `${effect.id}:eq-band${band}-pass-gain-ignored`,
         severity: 'info',
         effectIds: [effect.id],
-        ro: `EQ #${effect.id} banda ${band + 1}: tipul HPF/LPF ignoră parametrul Gain. Schimbă Freq sau Q pentru a regla filtrul.`,
-        en: `EQ #${effect.id} band ${band + 1}: HPF/LPF types ignore Gain. Adjust Freq or Q to tune the filter.`,
+        ro: {
+          beginner: `EQ #${effect.id} banda ${band + 1}: tipul HPF/LPF nu folosește knob-ul Gain. Modifică Freq (frecvența de tăiere) sau Q (panta) în schimb.`,
+          advanced: `EQ #${effect.id} banda ${band + 1}: tipul HPF/LPF ignoră parametrul Gain. Schimbă Freq sau Q pentru a regla filtrul.`,
+        },
+        en: {
+          beginner: `EQ #${effect.id} band ${band + 1}: HPF/LPF types don't use the Gain knob. Adjust Freq (the cutoff frequency) or Q (the slope) instead.`,
+          advanced: `EQ #${effect.id} band ${band + 1}: HPF/LPF types ignore Gain. Adjust Freq or Q to tune the filter.`,
+        },
       })
     }
     if (freq < 30 && bandType !== 3) {
@@ -199,8 +263,14 @@ function analyzeEq(effect: EffectInstance): FeedbackEntry[] {
         id: `${effect.id}:eq-band${band}-subsonic`,
         severity: 'info',
         effectIds: [effect.id],
-        ro: `EQ #${effect.id} banda ${band + 1}: freq ${freq.toFixed(0)} Hz e sub plaja audibilă. Util doar pentru HPF de curățare a infrasunetelor.`,
-        en: `EQ #${effect.id} band ${band + 1}: freq ${freq.toFixed(0)} Hz is below audible range. Only useful as a sub-sonic cleanup HPF.`,
+        ro: {
+          beginner: `EQ #${effect.id} banda ${band + 1}: ${freq.toFixed(0)} Hz e sub limita auzului uman (20 Hz). Nu vei auzi nicio diferență cu această setare.`,
+          advanced: `EQ #${effect.id} banda ${band + 1}: freq ${freq.toFixed(0)} Hz e sub plaja audibilă. Util doar pentru HPF de curățare a infrasunetelor.`,
+        },
+        en: {
+          beginner: `EQ #${effect.id} band ${band + 1}: ${freq.toFixed(0)} Hz is below the threshold of human hearing (20 Hz). You won't hear any difference with this setting.`,
+          advanced: `EQ #${effect.id} band ${band + 1}: freq ${freq.toFixed(0)} Hz is below audible range. Only useful as a sub-sonic cleanup HPF.`,
+        },
       })
     }
   }
@@ -210,8 +280,14 @@ function analyzeEq(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:eq-no-bands`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `EQ #${effect.id}: nicio bandă activă — efectul e inert. Activează cel puțin o bandă (click pe "Band X") pentru a auzi diferența.`,
-      en: `EQ #${effect.id}: no bands enabled — the effect is inert. Enable at least one band (click "Band X") to hear it.`,
+      ro: {
+        beginner: `EQ #${effect.id}: nicio bandă activată — EQ-ul nu face nimic. Click pe "Band 1", "Band 2" etc. pentru a activa o bandă și a auzi diferența.`,
+        advanced: `EQ #${effect.id}: nicio bandă activă — efectul e inert. Activează cel puțin o bandă (click pe "Band X") pentru a auzi diferența.`,
+      },
+      en: {
+        beginner: `EQ #${effect.id}: no bands enabled — the EQ isn't doing anything. Click "Band 1", "Band 2" etc. to enable a band and hear the difference.`,
+        advanced: `EQ #${effect.id}: no bands enabled — the effect is inert. Enable at least one band (click "Band X") to hear it.`,
+      },
     })
   }
 
@@ -227,8 +303,14 @@ function analyzeGain(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:gain-too-hot`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Gain #${effect.id}: +${gainDb.toFixed(1)} dB e foarte mare — verifică să nu clipeze ieșirea (peak meter).`,
-      en: `Gain #${effect.id}: +${gainDb.toFixed(1)} dB is very high — make sure the output doesn't clip (check the peak meter).`,
+      ro: {
+        beginner: `Gain #${effect.id}: +${gainDb.toFixed(1)} dB e foarte mare — semnalul poate distorsiona (clipping). Verifică meterele și coboară gain-ul dacă peak-ul depășește 0 dB.`,
+        advanced: `Gain #${effect.id}: +${gainDb.toFixed(1)} dB e foarte mare — verifică să nu clipeze ieșirea (peak meter).`,
+      },
+      en: {
+        beginner: `Gain #${effect.id}: +${gainDb.toFixed(1)} dB is very high — the signal may distort (clip). Watch the meters and reduce gain if the peak goes over 0 dB.`,
+        advanced: `Gain #${effect.id}: +${gainDb.toFixed(1)} dB is very high — make sure the output doesn't clip (check the peak meter).`,
+      },
     })
   }
   return out
@@ -247,8 +329,14 @@ function analyzeGate(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:gate-threshold-very-high`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Gate #${effect.id}: threshold la ${threshold.toFixed(1)} dB e foarte sus — gate-ul se va activa în mijlocul frazelor muzicale, nu doar pe pauze. Coboară la -30..-20 dB.`,
-      en: `Gate #${effect.id}: threshold at ${threshold.toFixed(1)} dB is very high — it will chop into musical phrases, not just silence. Lower to -30..-20 dB.`,
+      ro: {
+        beginner: `Gate #${effect.id}: threshold la ${threshold.toFixed(1)} dB e prea sus — gate-ul taie în mijlocul frazelor, nu doar pe pauze. Coboară la -30 până -20 dB.`,
+        advanced: `Gate #${effect.id}: threshold la ${threshold.toFixed(1)} dB e foarte sus — gate-ul se va activa în mijlocul frazelor muzicale, nu doar pe pauze. Coboară la -30..-20 dB.`,
+      },
+      en: {
+        beginner: `Gate #${effect.id}: threshold at ${threshold.toFixed(1)} dB is too high — the gate will chop into musical phrases, not just silence. Lower to -30..-20 dB.`,
+        advanced: `Gate #${effect.id}: threshold at ${threshold.toFixed(1)} dB is very high — it will chop into musical phrases, not just silence. Lower to -30..-20 dB.`,
+      },
     })
   }
   if (range > -6) {
@@ -256,8 +344,14 @@ function analyzeGate(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:gate-range-weak`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Gate #${effect.id}: range ${range.toFixed(1)} dB e aproape de 0 — atenuarea când gate-ul e "închis" e minimă. Setează la -40..-60 dB pentru efect real de noise gate.`,
-      en: `Gate #${effect.id}: range ${range.toFixed(1)} dB is near 0 — attenuation when closed is minimal. Set to -40..-60 dB for a real gating effect.`,
+      ro: {
+        beginner: `Gate #${effect.id}: range ${range.toFixed(1)} dB e aproape de 0 — gate-ul nu reduce prea mult zgomotul când e "închis". Setează la -40 sau -60 dB pentru un efect real.`,
+        advanced: `Gate #${effect.id}: range ${range.toFixed(1)} dB e aproape de 0 — atenuarea când gate-ul e "închis" e minimă. Setează la -40..-60 dB pentru efect real de noise gate.`,
+      },
+      en: {
+        beginner: `Gate #${effect.id}: range at ${range.toFixed(1)} dB is near 0 — the gate barely reduces noise when "closed". Set to -40 or -60 dB for a real noise reduction effect.`,
+        advanced: `Gate #${effect.id}: range ${range.toFixed(1)} dB is near 0 — attenuation when closed is minimal. Set to -40..-60 dB for a real gating effect.`,
+      },
     })
   }
   if (release < 20 && hold < 10) {
@@ -265,8 +359,14 @@ function analyzeGate(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:gate-fast-release-short-hold`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Gate #${effect.id}: release rapid (${release.toFixed(0)} ms) + hold scurt (${hold.toFixed(0)} ms) → risc de "chattering" (închideri rapide repetate pe semnale la limita threshold-ului). Mărește hold la 30+ ms.`,
-      en: `Gate #${effect.id}: fast release (${release.toFixed(0)} ms) + short hold (${hold.toFixed(0)} ms) → risk of "chattering" (rapid re-triggering on borderline signals). Increase hold to 30+ ms.`,
+      ro: {
+        beginner: `Gate #${effect.id}: release rapid (${release.toFixed(0)} ms) + hold scurt (${hold.toFixed(0)} ms) = gate-ul "pâlpâie" rapid pe semnale la limita threshold-ului. Mărește Hold la cel puțin 30 ms.`,
+        advanced: `Gate #${effect.id}: release rapid (${release.toFixed(0)} ms) + hold scurt (${hold.toFixed(0)} ms) → risc de "chattering" (închideri rapide repetate pe semnale la limita threshold-ului). Mărește hold la 30+ ms.`,
+      },
+      en: {
+        beginner: `Gate #${effect.id}: fast release (${release.toFixed(0)} ms) + short hold (${hold.toFixed(0)} ms) = the gate "flickers" rapidly on signals near the threshold. Increase Hold to at least 30 ms.`,
+        advanced: `Gate #${effect.id}: fast release (${release.toFixed(0)} ms) + short hold (${hold.toFixed(0)} ms) → risk of "chattering" (rapid re-triggering on borderline signals). Increase hold to 30+ ms.`,
+      },
     })
   }
   return out
@@ -283,8 +383,14 @@ function analyzeLimiter(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:limiter-ceiling-very-low`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Limiter #${effect.id}: ceiling ${ceiling.toFixed(1)} dB — limitezi agresiv. La valori sub -6 dB veți auzi o reducere evidentă a volumului. Pentru mastering, -1..-0.3 dB e standard.`,
-      en: `Limiter #${effect.id}: ceiling at ${ceiling.toFixed(1)} dB — aggressive limiting. Below -6 dB you'll hear a clear volume reduction. For mastering, -1..-0.3 dB is standard.`,
+      ro: {
+        beginner: `Limiter #${effect.id}: ceiling ${ceiling.toFixed(1)} dB e prea jos — volumul general va scădea vizibil. Pentru uz normal, -1 dB e suficient ca marjă de siguranță.`,
+        advanced: `Limiter #${effect.id}: ceiling ${ceiling.toFixed(1)} dB — limitezi agresiv. La valori sub -6 dB veți auzi o reducere evidentă a volumului. Pentru mastering, -1..-0.3 dB e standard.`,
+      },
+      en: {
+        beginner: `Limiter #${effect.id}: ceiling at ${ceiling.toFixed(1)} dB is too low — the overall volume will drop noticeably. For normal use, -1 dB is enough as a safety margin.`,
+        advanced: `Limiter #${effect.id}: ceiling at ${ceiling.toFixed(1)} dB — aggressive limiting. Below -6 dB you'll hear a clear volume reduction. For mastering, -1..-0.3 dB is standard.`,
+      },
     })
   }
   if (release < 10) {
@@ -292,8 +398,14 @@ function analyzeLimiter(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:limiter-fast-release`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Limiter #${effect.id}: release de ${release.toFixed(0)} ms e foarte rapid — pe material cu peak-uri repetate vei auzi "pumping" (volum care pulsează). Încearcă 30-100 ms.`,
-      en: `Limiter #${effect.id}: release of ${release.toFixed(0)} ms is very fast — on material with repeated peaks you'll hear "pumping" (pulsing volume). Try 30-100 ms.`,
+      ro: {
+        beginner: `Limiter #${effect.id}: release de ${release.toFixed(0)} ms e prea rapid — vei auzi volumul "pompând" (pulsând) pe sunete repetate. Încearcă 30-100 ms.`,
+        advanced: `Limiter #${effect.id}: release de ${release.toFixed(0)} ms e foarte rapid — pe material cu peak-uri repetate vei auzi "pumping" (volum care pulsează). Încearcă 30-100 ms.`,
+      },
+      en: {
+        beginner: `Limiter #${effect.id}: release of ${release.toFixed(0)} ms is too fast — you'll hear the volume "pumping" (pulsing) on repeated sounds. Try 30-100 ms.`,
+        advanced: `Limiter #${effect.id}: release of ${release.toFixed(0)} ms is very fast — on material with repeated peaks you'll hear "pumping" (pulsing volume). Try 30-100 ms.`,
+      },
     })
   }
   return out
@@ -311,8 +423,14 @@ function analyzeDelay(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:delay-feedback-runaway`,
       severity: 'critical',
       effectIds: [effect.id],
-      ro: `Delay #${effect.id}: feedback ${Math.round(feedback * 100)}% — la valori peste 85% eco-urile se pot acumula și satura ieșirea ("runaway"). Coboară sub 80%.`,
-      en: `Delay #${effect.id}: feedback at ${Math.round(feedback * 100)}% — above 85% echoes can accumulate and saturate the output ("runaway"). Keep below 80%.`,
+      ro: {
+        beginner: `Delay #${effect.id}: feedback ${Math.round(feedback * 100)}% e periculos — eco-urile se acumulează și pot distorsiona ieșirea. Coboară sub 80%.`,
+        advanced: `Delay #${effect.id}: feedback ${Math.round(feedback * 100)}% — la valori peste 85% eco-urile se pot acumula și satura ieșirea ("runaway"). Coboară sub 80%.`,
+      },
+      en: {
+        beginner: `Delay #${effect.id}: feedback at ${Math.round(feedback * 100)}% is dangerous — echoes accumulate and can saturate / distort the output. Keep below 80%.`,
+        advanced: `Delay #${effect.id}: feedback at ${Math.round(feedback * 100)}% — above 85% echoes can accumulate and saturate the output ("runaway"). Keep below 80%.`,
+      },
     })
   }
   if (wet > 0.7 && feedback > 0.5) {
@@ -320,8 +438,14 @@ function analyzeDelay(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:delay-wet-feedback-muddy`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Delay #${effect.id}: mix ridicat (${Math.round(wet * 100)}%) + feedback mare (${Math.round(feedback * 100)}%) → sunet aglomerat. Pe voce și instrumente melodice păstrează mix sub 40%.`,
-      en: `Delay #${effect.id}: high mix (${Math.round(wet * 100)}%) + high feedback (${Math.round(feedback * 100)}%) → muddy sound. On vocals and melodic instruments keep mix below 40%.`,
+      ro: {
+        beginner: `Delay #${effect.id}: mix ridicat (${Math.round(wet * 100)}%) + feedback mare (${Math.round(feedback * 100)}%) = prea multe eco-uri, sunet aglomerat. Pe voce și instrumente, coboară mix-ul sub 40%.`,
+        advanced: `Delay #${effect.id}: mix ridicat (${Math.round(wet * 100)}%) + feedback mare (${Math.round(feedback * 100)}%) → sunet aglomerat. Pe voce și instrumente melodice păstrează mix sub 40%.`,
+      },
+      en: {
+        beginner: `Delay #${effect.id}: high mix (${Math.round(wet * 100)}%) + high feedback (${Math.round(feedback * 100)}%) = too many echoes, cluttered sound. On vocals and instruments keep mix below 40%.`,
+        advanced: `Delay #${effect.id}: high mix (${Math.round(wet * 100)}%) + high feedback (${Math.round(feedback * 100)}%) → muddy sound. On vocals and melodic instruments keep mix below 40%.`,
+      },
     })
   }
   if (tone > 15000) {
@@ -329,8 +453,14 @@ function analyzeDelay(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:delay-tone-bright`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Delay #${effect.id}: tone ${(tone / 1000).toFixed(1)}k Hz — feedback-ul e strălucitor (LP-ul e deschis). Eco-urile vor suna la fel de clare ca originalul, ceea ce poate obosi urechea. Încearcă 4-8 kHz.`,
-      en: `Delay #${effect.id}: tone ${(tone / 1000).toFixed(1)}k Hz — feedback is bright (LP is wide open). Echoes will sound as clear as the original, which can fatigue the ear. Try 4-8 kHz.`,
+      ro: {
+        beginner: `Delay #${effect.id}: tone ${(tone / 1000).toFixed(1)}k Hz — eco-urile sună la fel de strălucitoare ca originalul, ceea ce poate obosi urechea rapid. Încearcă 4-8 kHz pentru un efect mai cald.`,
+        advanced: `Delay #${effect.id}: tone ${(tone / 1000).toFixed(1)}k Hz — feedback-ul e strălucitor (LP-ul e deschis). Eco-urile vor suna la fel de clare ca originalul, ceea ce poate obosi urechea. Încearcă 4-8 kHz.`,
+      },
+      en: {
+        beginner: `Delay #${effect.id}: tone at ${(tone / 1000).toFixed(1)}k Hz — echoes sound as bright as the original, which fatigues the ear quickly. Try 4-8 kHz for a warmer effect.`,
+        advanced: `Delay #${effect.id}: tone ${(tone / 1000).toFixed(1)}k Hz — feedback is bright (LP is wide open). Echoes will sound as clear as the original, which can fatigue the ear. Try 4-8 kHz.`,
+      },
     })
   }
   return out
@@ -348,8 +478,14 @@ function analyzeReverb(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:reverb-self-oscillation`,
       severity: 'critical',
       effectIds: [effect.id],
-      ro: `Reverb #${effect.id}: size ${Math.round(size * 100)}% — aproape de auto-oscilație (reverb infinit). Feedback-ul comb-filter-elor se acumulează și sunetul nu se mai stinge. Coboară sub 90%.`,
-      en: `Reverb #${effect.id}: size at ${Math.round(size * 100)}% — near self-oscillation (infinite reverb). Comb feedback accumulates and the tail never decays. Keep below 90%.`,
+      ro: {
+        beginner: `Reverb #${effect.id}: size ${Math.round(size * 100)}% — reverb-ul nu se mai stinge (reverb infinit). Coboară sub 90% pentru a evita sunetul haotic.`,
+        advanced: `Reverb #${effect.id}: size ${Math.round(size * 100)}% — aproape de auto-oscilație (reverb infinit). Feedback-ul comb-filter-elor se acumulează și sunetul nu se mai stinge. Coboară sub 90%.`,
+      },
+      en: {
+        beginner: `Reverb #${effect.id}: size at ${Math.round(size * 100)}% — the reverb tail never decays (infinite reverb). Keep below 90% to avoid a chaotic sound.`,
+        advanced: `Reverb #${effect.id}: size at ${Math.round(size * 100)}% — near self-oscillation (infinite reverb). Comb feedback accumulates and the tail never decays. Keep below 90%.`,
+      },
     })
   }
   if (wet > 0.6) {
@@ -357,8 +493,14 @@ function analyzeReverb(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:reverb-too-wet`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Reverb #${effect.id}: mix ${Math.round(wet * 100)}% — reverb-ul domină semnalul uscat. Vocea sau instrumentul se va pierde în spațiu. Tipic: 15-35% pe voce, 20-40% pe instrumente.`,
-      en: `Reverb #${effect.id}: mix at ${Math.round(wet * 100)}% — reverb dominates the dry signal. Vocals or instruments will get lost in the space. Typical: 15-35% on vocals, 20-40% on instruments.`,
+      ro: {
+        beginner: `Reverb #${effect.id}: mix ${Math.round(wet * 100)}% — prea mult reverb, vocea sau instrumentul se pierde. Încearcă 15-35% pe voce, 20-40% pe instrumente.`,
+        advanced: `Reverb #${effect.id}: mix ${Math.round(wet * 100)}% — reverb-ul domină semnalul uscat. Vocea sau instrumentul se va pierde în spațiu. Tipic: 15-35% pe voce, 20-40% pe instrumente.`,
+      },
+      en: {
+        beginner: `Reverb #${effect.id}: mix at ${Math.round(wet * 100)}% — too much reverb, the vocal or instrument gets lost. Try 15-35% on vocals, 20-40% on instruments.`,
+        advanced: `Reverb #${effect.id}: mix at ${Math.round(wet * 100)}% — reverb dominates the dry signal. Vocals or instruments will get lost in the space. Typical: 15-35% on vocals, 20-40% on instruments.`,
+      },
     })
   }
   if (preDelay === 0 && wet > 0.2) {
@@ -366,8 +508,14 @@ function analyzeReverb(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:reverb-no-predelay`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Reverb #${effect.id}: predelay 0 ms — reverb-ul pornește imediat după atacul sunetului, ceea ce poate îneca tranzientele. Încearcă 15-30 ms pentru a păstra claritatea atacului.`,
-      en: `Reverb #${effect.id}: predelay 0 ms — reverb starts immediately with the sound's attack, which can drown transients. Try 15-30 ms to keep the attack clear.`,
+      ro: {
+        beginner: `Reverb #${effect.id}: predelay 0 ms — reverb-ul începe imediat cu atacul sunetului. Adaugă 15-30 ms predelay pentru ca sunetul să rămână clar și reverb-ul să vină după.`,
+        advanced: `Reverb #${effect.id}: predelay 0 ms — reverb-ul pornește imediat după atacul sunetului, ceea ce poate îneca tranzientele. Încearcă 15-30 ms pentru a păstra claritatea atacului.`,
+      },
+      en: {
+        beginner: `Reverb #${effect.id}: predelay at 0 ms — reverb starts immediately with the sound's attack. Add 15-30 ms predelay so the sound stays upfront and the reverb follows behind.`,
+        advanced: `Reverb #${effect.id}: predelay 0 ms — reverb starts immediately with the sound's attack, which can drown transients. Try 15-30 ms to keep the attack clear.`,
+      },
     })
   }
   return out
@@ -385,8 +533,14 @@ function analyzeSaturation(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:saturation-harsh`,
       severity: 'warning',
       effectIds: [effect.id],
-      ro: `Saturation #${effect.id}: drive mare (+${drive.toFixed(1)} dB) + tone deschis (${(tone / 1000).toFixed(1)}k Hz) → aliasing și harshness accentuat. Coboară tone la 6-8 kHz pentru a rula armonicele de sus.`,
-      en: `Saturation #${effect.id}: high drive (+${drive.toFixed(1)} dB) + bright tone (${(tone / 1000).toFixed(1)}k Hz) → aliasing and harsh upper harmonics. Lower tone to 6-8 kHz to roll off the harshest partials.`,
+      ro: {
+        beginner: `Saturation #${effect.id}: drive mare (+${drive.toFixed(1)} dB) + tone deschis (${(tone / 1000).toFixed(1)}k Hz) = sunet aspru, obositor. Coboară Tone la 6-8 kHz pentru a înmuia înaltele.`,
+        advanced: `Saturation #${effect.id}: drive mare (+${drive.toFixed(1)} dB) + tone deschis (${(tone / 1000).toFixed(1)}k Hz) → aliasing și harshness accentuat. Coboară tone la 6-8 kHz pentru a rula armonicele de sus.`,
+      },
+      en: {
+        beginner: `Saturation #${effect.id}: high drive (+${drive.toFixed(1)} dB) + open tone (${(tone / 1000).toFixed(1)}k Hz) = harsh, ear-fatiguing sound. Lower Tone to 6-8 kHz to soften the highs.`,
+        advanced: `Saturation #${effect.id}: high drive (+${drive.toFixed(1)} dB) + bright tone (${(tone / 1000).toFixed(1)}k Hz) → aliasing and harsh upper harmonics. Lower tone to 6-8 kHz to roll off the harshest partials.`,
+      },
     })
   }
   if (drive > 24) {
@@ -394,8 +548,14 @@ function analyzeSaturation(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:saturation-extreme-drive`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Saturation #${effect.id}: drive +${drive.toFixed(1)} dB — distorsiune pronunțată. Intenționat? Dacă vrei densitate subtilă, încearcă 6-12 dB cu mix 40-70%.`,
-      en: `Saturation #${effect.id}: drive +${drive.toFixed(1)} dB — pronounced distortion. Intentional? For subtle density, try 6-12 dB at 40-70% mix.`,
+      ro: {
+        beginner: `Saturation #${effect.id}: drive +${drive.toFixed(1)} dB — distorsiune puternică. Dacă vrei doar "căldură" subtilă, încearcă 6-12 dB cu mix 40-70%.`,
+        advanced: `Saturation #${effect.id}: drive +${drive.toFixed(1)} dB — distorsiune pronunțată. Intenționat? Dacă vrei densitate subtilă, încearcă 6-12 dB cu mix 40-70%.`,
+      },
+      en: {
+        beginner: `Saturation #${effect.id}: drive +${drive.toFixed(1)} dB — heavy distortion. If you just want subtle "warmth", try 6-12 dB at 40-70% mix.`,
+        advanced: `Saturation #${effect.id}: drive +${drive.toFixed(1)} dB — pronounced distortion. Intentional? For subtle density, try 6-12 dB at 40-70% mix.`,
+      },
     })
   }
   if (wet < 0.2 && drive > 0) {
@@ -403,8 +563,14 @@ function analyzeSaturation(effect: EffectInstance): FeedbackEntry[] {
       id: `${effect.id}:saturation-very-dry`,
       severity: 'info',
       effectIds: [effect.id],
-      ro: `Saturation #${effect.id}: mix ${Math.round(wet * 100)}% — aproape inaudibil. Mărește mix sau drive-ul pentru a simți efectul.`,
-      en: `Saturation #${effect.id}: mix at ${Math.round(wet * 100)}% — barely audible. Increase mix or drive to hear the effect.`,
+      ro: {
+        beginner: `Saturation #${effect.id}: mix ${Math.round(wet * 100)}% — efectul e aproape inaudibil. Mărește Mix sau Drive-ul pentru a auzi diferența.`,
+        advanced: `Saturation #${effect.id}: mix ${Math.round(wet * 100)}% — aproape inaudibil. Mărește mix sau drive-ul pentru a simți efectul.`,
+      },
+      en: {
+        beginner: `Saturation #${effect.id}: mix at ${Math.round(wet * 100)}% — the effect is barely audible. Increase Mix or Drive to hear the difference.`,
+        advanced: `Saturation #${effect.id}: mix at ${Math.round(wet * 100)}% — barely audible. Increase mix or drive to hear the effect.`,
+      },
     })
   }
   return out
@@ -435,8 +601,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:${a.id}->${b.id}:bass-boost-precomp`,
         severity: 'warning',
         effectIds: [a.id, b.id],
-        ro: `EQ #${a.id} (boost de bas) → Compressor #${b.id}: boost-ul amplifică declanșarea compresorului pe frecvențele joase. Pentru tonalitate stabilă, mută EQ-ul *după* compressor sau urcă SC HPF pe compressor.`,
-        en: `EQ #${a.id} (bass boost) → Compressor #${b.id}: the boost makes the compressor react harder to lows. For stable tone, move EQ *after* the compressor, or raise the SC HPF on the compressor.`,
+        ro: {
+          beginner: `EQ #${a.id} (boost de bas) → Compressor #${b.id}: bass-ul amplificat face compresorul să reacționeze prea puternic la frecvențele joase. Mută EQ-ul *după* compressor, sau ridică SC HPF pe compressor.`,
+          advanced: `EQ #${a.id} (boost de bas) → Compressor #${b.id}: boost-ul amplifică declanșarea compresorului pe frecvențele joase. Pentru tonalitate stabilă, mută EQ-ul *după* compressor sau urcă SC HPF pe compressor.`,
+        },
+        en: {
+          beginner: `EQ #${a.id} (bass boost) → Compressor #${b.id}: the boosted bass makes the compressor over-react to low frequencies. Move EQ *after* the compressor, or raise the SC HPF on the compressor.`,
+          advanced: `EQ #${a.id} (bass boost) → Compressor #${b.id}: the boost makes the compressor react harder to lows. For stable tone, move EQ *after* the compressor, or raise the SC HPF on the compressor.`,
+        },
       })
     }
   }
@@ -453,8 +625,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:${a.id}->${b.id}:double-fast-comp`,
         severity: 'warning',
         effectIds: [a.id, b.id],
-        ro: `Două Compressor-i (#${a.id} → #${b.id}) cu attack rapid în cascadă — risc de "pumping" și dinamică artificială. Folosește un compressor cu attack lent + un limiter la final.`,
-        en: `Two compressors (#${a.id} → #${b.id}) with fast attack in series — risks "pumping" and artificial dynamics. Use one slow-attack compressor + a limiter at the end instead.`,
+        ro: {
+          beginner: `Două compressoare (#${a.id} → #${b.id}) cu attack rapid unul după altul — dublezi riscul de "pumping". Mai simplu: un singur compressor cu attack lent + un limiter la final.`,
+          advanced: `Două Compressor-i (#${a.id} → #${b.id}) cu attack rapid în cascadă — risc de "pumping" și dinamică artificială. Folosește un compressor cu attack lent + un limiter la final.`,
+        },
+        en: {
+          beginner: `Two compressors (#${a.id} → #${b.id}) with fast attack back-to-back — doubles the risk of "pumping". Simpler: one slow-attack compressor + a limiter at the end.`,
+          advanced: `Two compressors (#${a.id} → #${b.id}) with fast attack in series — risks "pumping" and artificial dynamics. Use one slow-attack compressor + a limiter at the end instead.`,
+        },
       })
     }
   }
@@ -474,8 +652,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:eq-only-no-bands`,
         severity: 'info',
         effectIds: [eq.id],
-        ro: `Singurul efect activ e un EQ fără benzi pornite — chain-ul e momentan transparent. Activează cel puțin o bandă pentru a auzi vreo diferență.`,
-        en: `The only active effect is an EQ with no enabled bands — the chain is currently transparent. Enable at least one band to hear something.`,
+        ro: {
+          beginner: `Singurul efect e un EQ fără benzi activate — semnalul trece neschimbat. Click pe "Band 1" sau "Band 2" pentru a activa o bandă.`,
+          advanced: `Singurul efect activ e un EQ fără benzi pornite — chain-ul e momentan transparent. Activează cel puțin o bandă pentru a auzi vreo diferență.`,
+        },
+        en: {
+          beginner: `The only effect is an EQ with no bands enabled — the signal passes through unchanged. Click "Band 1" or "Band 2" to enable a band.`,
+          advanced: `The only active effect is an EQ with no enabled bands — the chain is currently transparent. Enable at least one band to hear something.`,
+        },
       })
     }
   }
@@ -490,8 +674,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:first-comp-deep-threshold`,
         severity: 'info',
         effectIds: [c.id],
-        ro: `Compressor #${c.id} pe primul slot cu threshold ${t.toFixed(1)} dB — comprimi aproape tot semnalul, inclusiv zgomotul. De obicei se face mai întâi gain staging și/sau gate, apoi compresie.`,
-        en: `Compressor #${c.id} as the first effect with threshold ${t.toFixed(1)} dB — almost everything (including noise) gets compressed. Typically gain-stage and/or gate first, then compress.`,
+        ro: {
+          beginner: `Compressor #${c.id} pe primul slot cu threshold ${t.toFixed(1)} dB — comprimă aproape tot, inclusiv zgomotul de fond. Încearcă mai întâi un Gate sau ajustează volumul de intrare.`,
+          advanced: `Compressor #${c.id} pe primul slot cu threshold ${t.toFixed(1)} dB — comprimi aproape tot semnalul, inclusiv zgomotul. De obicei se face mai întâi gain staging și/sau gate, apoi compresie.`,
+        },
+        en: {
+          beginner: `Compressor #${c.id} first in chain with threshold ${t.toFixed(1)} dB — almost everything including background noise gets compressed. Try adding a Gate first, or adjust the input level.`,
+          advanced: `Compressor #${c.id} as the first effect with threshold ${t.toFixed(1)} dB — almost everything (including noise) gets compressed. Typically gain-stage and/or gate first, then compress.`,
+        },
       })
     }
   }
@@ -505,8 +695,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
       id: `chain:${a.id}->${b.id}:reverb-into-compressor`,
       severity: 'warning',
       effectIds: [a.id, b.id],
-      ro: `Reverb #${a.id} → Compressor #${b.id}: tail-ul reverb-ului va declanșa compresorul, "pompând" semnalul în mod artificial. Pune compresorul *înaintea* reverb-ului.`,
-      en: `Reverb #${a.id} → Compressor #${b.id}: the reverb tail will keep triggering the compressor, causing artificial "pumping." Put the compressor *before* the reverb.`,
+      ro: {
+        beginner: `Reverb #${a.id} → Compressor #${b.id}: reverb-ul produce un "ecou" lung, iar compresorul îl va tăia ritmic — sună ciudat. Mută compresorul înaintea reverb-ului.`,
+        advanced: `Reverb #${a.id} → Compressor #${b.id}: tail-ul reverb-ului va declanșa compresorul, "pompând" semnalul în mod artificial. Pune compresorul *înaintea* reverb-ului.`,
+      },
+      en: {
+        beginner: `Reverb #${a.id} → Compressor #${b.id}: the reverb's long tail will cause the compressor to chop it rhythmically — sounds odd. Move the compressor before the reverb.`,
+        advanced: `Reverb #${a.id} → Compressor #${b.id}: the reverb tail will keep triggering the compressor, causing artificial "pumping." Put the compressor *before* the reverb.`,
+      },
     })
   }
 
@@ -521,8 +717,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:${a.id}->${b.id}:reverb-into-saturation`,
         severity: 'info',
         effectIds: [a.id, b.id],
-        ro: `Reverb #${a.id} → Saturation #${b.id}: saturai inclusiv tail-ul de reverb, ceea ce poate suna nenatural. Dacă intenționat, e un efect de "grit on ambience"; altfel mută Saturation înaintea Reverb.`,
-        en: `Reverb #${a.id} → Saturation #${b.id}: you're saturating the reverb tail too, which can sound unnatural. If intentional, it's a "grit on ambience" effect; otherwise move Saturation before Reverb.`,
+        ro: {
+          beginner: `Reverb #${a.id} → Saturation #${b.id}: saturezi și "coada" reverb-ului, nu doar sunetul direct. Dacă vrei un efect mai curat, pune Saturation înaintea Reverb.`,
+          advanced: `Reverb #${a.id} → Saturation #${b.id}: saturai inclusiv tail-ul de reverb, ceea ce poate suna nenatural. Dacă intenționat, e un efect de "grit on ambience"; altfel mută Saturation înaintea Reverb.`,
+        },
+        en: {
+          beginner: `Reverb #${a.id} → Saturation #${b.id}: you're saturating the reverb tail as well, not just the dry signal. For a cleaner sound, move Saturation before Reverb.`,
+          advanced: `Reverb #${a.id} → Saturation #${b.id}: you're saturating the reverb tail too, which can sound unnatural. If intentional, it's a "grit on ambience" effect; otherwise move Saturation before Reverb.`,
+        },
       })
     }
   }
@@ -538,8 +740,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:${a.id}->${b.id}:reverb-into-delay`,
         severity: 'warning',
         effectIds: [a.id, b.id],
-        ro: `Reverb #${a.id} → Delay #${b.id}: delay-ul repetă tail-ul de reverb, rezultând un sunet extrem de aglomerat. Ordinea standard este Delay → Reverb (reverb-ul îmbracă eco-urile, nu invers).`,
-        en: `Reverb #${a.id} → Delay #${b.id}: delay repeats the reverb tail, resulting in a very cluttered sound. Standard order is Delay → Reverb (reverb wraps the echoes, not the other way around).`,
+        ro: {
+          beginner: `Reverb #${a.id} → Delay #${b.id}: delay-ul repetă "coada" lungă a reverb-ului și totul devine foarte aglomerat. Încearcă ordinea inversă: Delay înainte de Reverb.`,
+          advanced: `Reverb #${a.id} → Delay #${b.id}: delay-ul repetă tail-ul de reverb, rezultând un sunet extrem de aglomerat. Ordinea standard este Delay → Reverb (reverb-ul îmbracă eco-urile, nu invers).`,
+        },
+        en: {
+          beginner: `Reverb #${a.id} → Delay #${b.id}: the delay repeats the reverb's long tail and everything gets very muddy. Try the reversed order: Delay before Reverb.`,
+          advanced: `Reverb #${a.id} → Delay #${b.id}: delay repeats the reverb tail, resulting in a very cluttered sound. Standard order is Delay → Reverb (reverb wraps the echoes, not the other way around).`,
+        },
       })
     }
   }
@@ -556,8 +764,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:${a.id}->${b.id}:comp-fast-release-gate`,
         severity: 'info',
         effectIds: [a.id, b.id],
-        ro: `Compressor #${a.id} (release rapid ${compRelease.toFixed(0)} ms) → Gate #${b.id}: release-ul rapid al compresorului scade nivelul sub threshold-ul gate-ului, declanșând chattering. Mărește release-ul compresorului sau coboară threshold-ul gate-ului.`,
-        en: `Compressor #${a.id} (fast release ${compRelease.toFixed(0)} ms) → Gate #${b.id}: the fast compressor release can dip the level below the gate threshold, causing chattering. Increase the compressor release or lower the gate threshold.`,
+        ro: {
+          beginner: `Compressor #${a.id} → Gate #${b.id}: compresorul lasă sunetul să scadă repede, iar gate-ul îl taie brusc — auzi un "clipping" ritmic. Încearcă să mărești release-ul la compresor.`,
+          advanced: `Compressor #${a.id} (release rapid ${compRelease.toFixed(0)} ms) → Gate #${b.id}: release-ul rapid al compresorului scade nivelul sub threshold-ul gate-ului, declanșând chattering. Mărește release-ul compresorului sau coboară threshold-ul gate-ului.`,
+        },
+        en: {
+          beginner: `Compressor #${a.id} → Gate #${b.id}: the compressor lets the level drop quickly, and the gate snaps it shut — you get rhythmic chopping. Try increasing the compressor's release time.`,
+          advanced: `Compressor #${a.id} (fast release ${compRelease.toFixed(0)} ms) → Gate #${b.id}: the fast compressor release can dip the level below the gate threshold, causing chattering. Increase the compressor release or lower the gate threshold.`,
+        },
       })
     }
   }
@@ -572,8 +786,14 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
         id: `chain:limiter-not-last:${lim.id}`,
         severity: 'warning',
         effectIds: [lim.id],
-        ro: `Limiter #${lim.id} nu e pe ultima poziție din chain — efectele de după pot depăși ceiling-ul său. Un limiter e de obicei ultimul în lanț.`,
-        en: `Limiter #${lim.id} is not the last effect in the chain — effects after it can exceed its ceiling. A limiter is typically the final stage.`,
+        ro: {
+          beginner: `Limiter #${lim.id} nu este ultimul efect din lanț. Efectele care urmează după el pot face sunetul mai tare decât limita setată. Mută limiter-ul la final.`,
+          advanced: `Limiter #${lim.id} nu e pe ultima poziție din chain — efectele de după pot depăși ceiling-ul său. Un limiter e de obicei ultimul în lanț.`,
+        },
+        en: {
+          beginner: `Limiter #${lim.id} is not the last effect in the chain. Effects after it can make the signal louder than your set ceiling. Move the limiter to the end.`,
+          advanced: `Limiter #${lim.id} is not the last effect in the chain — effects after it can exceed its ceiling. A limiter is typically the final stage.`,
+        },
       })
     }
   }
@@ -600,6 +820,10 @@ export function analyzeAll(effects: EffectInstance[]): FeedbackEntry[] {
   return out
 }
 
-export function pickFeedback(entry: FeedbackEntry, language: EducationLanguage): string {
-  return entry[language]
+export function pickFeedback(
+  entry: FeedbackEntry,
+  language: EducationLanguage,
+  mode: EducationMode,
+): string {
+  return entry[language][mode]
 }

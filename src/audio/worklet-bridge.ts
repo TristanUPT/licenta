@@ -9,6 +9,7 @@ export type WorkletInMsg =
   | { type: 'remove_effect'; instanceId: number }
   | { type: 'set_param'; instanceId: number; paramId: number; value: number }
   | { type: 'set_bypass'; instanceId: number; bypassed: boolean }
+  | { type: 'set_global_bypass'; bypassed: boolean }
   | { type: 'reorder'; order: number[] }
 
 export type WorkletOutMsg =

@@ -32,6 +32,8 @@ export function EffectsRack() {
   const effects = useEffectsStore((s) => s.effects)
   const addEffect = useEffectsStore((s) => s.addEffect)
   const reorder = useEffectsStore((s) => s.reorder)
+  const globalBypass = useEffectsStore((s) => s.globalBypass)
+  const setGlobalBypass = useEffectsStore((s) => s.setGlobalBypass)
 
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,9 +89,26 @@ export function EffectsRack() {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-          Effects chain
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            Effects chain
+          </h2>
+          {effects.length > 0 && (
+            <button
+              onClick={() => setGlobalBypass(!globalBypass)}
+              aria-pressed={globalBypass}
+              title={globalBypass ? 'Ascultă cu efectele active (A)' : 'Ascultă semnalul original (B)'}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
+                globalBypass
+                  ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40 hover:bg-amber-500/30'
+                  : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${globalBypass ? 'bg-amber-400' : 'bg-zinc-600'}`} />
+              {globalBypass ? 'B — Original' : 'A — Processed'}
+            </button>
+          )}
+        </div>
         <Popover.Root open={open} onOpenChange={setOpen}>
           <Popover.Trigger asChild>
             <button className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-purple-500">
@@ -144,7 +163,7 @@ export function EffectsRack() {
           Niciun efect activ. Adaugă unul pentru a începe să modifici sunetul.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className={`space-y-3 transition-opacity duration-200 ${globalBypass ? 'opacity-40' : ''}`}>
           {effects.map((instance, i) => (
             <div
               key={instance.id}
