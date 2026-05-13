@@ -13,6 +13,7 @@ export interface Preset {
   id: string
   name: { ro: string; en: string }
   description: { ro: string; en: string }
+  category?: 'factory' | 'user'
   effects: PresetEffect[]
 }
 

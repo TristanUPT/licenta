@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAudioStore } from '@/store/audioStore'
+import { useEffectsStore } from '@/store/effectsStore'
 import * as transport from '@/audio/transport'
+import { renderAndDownload } from '@/audio/export'
 import { LevelMeter } from '@/components/visualization/LevelMeter'
 
 function formatTime(sec: number): string {
@@ -15,6 +17,8 @@ export function TransportBar() {
   const audioBuffer = useAudioStore((s) => s.audioBuffer)
   const currentFile = useAudioStore((s) => s.currentFile)
   const isPlaying = useAudioStore((s) => s.isPlaying)
+  const effects = useEffectsStore((s) => s.effects)
+  const [exporting, setExporting] = useState(false)
   const isLooping = useAudioStore((s) => s.isLooping)
   const loopStart = useAudioStore((s) => s.loopStart)
   const loopEnd = useAudioStore((s) => s.loopEnd)
@@ -59,6 +63,16 @@ export function TransportBar() {
   }
 
   const duration = audioBuffer?.duration ?? 0
+
+  async function handleExport() {
+    if (!audioBuffer || !currentFile || exporting) return
+    setExporting(true)
+    try {
+      await renderAndDownload(audioBuffer, effects, currentFile.name)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
@@ -111,6 +125,29 @@ export function TransportBar() {
               {currentFile.sampleRate / 1000}kHz · {currentFile.numberOfChannels === 1 ? 'mono' : 'stereo'}
             </span>
           </div>
+          <button
+            onClick={() => void handleExport()}
+            disabled={exporting || effects.length === 0}
+            title={effects.length === 0 ? 'Add effects before exporting' : 'Export processed audio as WAV'}
+            className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {exporting ? (
+              <>
+                <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Exporting…
+              </>
+            ) : (
+              <>
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                WAV
+              </>
+            )}
+          </button>
           <button
             onClick={() => { transport.stop(); clearFile() }}
             className="text-xs text-zinc-500 transition hover:text-zinc-200"

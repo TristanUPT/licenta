@@ -3,6 +3,7 @@ import * as Switch from '@radix-ui/react-switch'
 import { getStatus, subscribe, type EngineStatus } from '@/audio/engine'
 import { useAudioStore } from '@/store/audioStore'
 import { useEducationStore } from '@/store/educationStore'
+import { usePresetStore } from '@/store/presetStore'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
@@ -27,6 +28,9 @@ const STATUS_DOT: Record<EngineStatus, string> = {
 function App() {
   const [status, setStatus] = useState<EngineStatus>(getStatus().status)
   useEffect(() => subscribe((s) => setStatus(s)), [])
+
+  const loadUserPresets = usePresetStore((s) => s.loadUserPresetsFromDB)
+  useEffect(() => { void loadUserPresets() }, [loadUserPresets])
 
   const currentFile = useAudioStore((s) => s.currentFile)
   const mode = useEducationStore((s) => s.mode)
