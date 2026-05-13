@@ -1,0 +1,15 @@
+{
+  "name": "soundlab-dsp",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "soundlab_dsp_bg.wasm",
+    "soundlab_dsp.js",
+    "soundlab_dsp.d.ts"
+  ],
+  "main": "soundlab_dsp.js",
+  "types": "soundlab_dsp.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
