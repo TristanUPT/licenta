@@ -419,9 +419,9 @@ export const CHORUS_DEFINITION: EffectDefinition = {
   label: 'Chorus',
   description: '3-voice LFO-modulated delay — thickens and widens the signal.',
   params: [
-    { id: CHORUS_PARAM.RATE,     label: 'Rate',  description: 'LFO speed.',         min: 0.1, max: 5,  default: 1.5, unit: 'Hz',  format: (v) => `${v.toFixed(2)}` },
+    { id: CHORUS_PARAM.RATE,     label: 'Rate',  description: 'LFO speed.',         min: 0.1, max: 3,  default: 0.8, unit: 'Hz',  format: (v) => `${v.toFixed(2)}` },
     { id: CHORUS_PARAM.DEPTH,    label: 'Depth', description: 'Modulation depth.',  min: 0,   max: 1,  default: 0.5,              format: (v) => `${Math.round(v * 100)}%` },
-    { id: CHORUS_PARAM.DELAY_MS, label: 'Delay', description: 'Base delay time.',   min: 5,   max: 30, default: 15,  unit: 'ms',  format: (v) => `${v.toFixed(1)}` },
+    { id: CHORUS_PARAM.DELAY_MS, label: 'Delay', description: 'Base delay time.',   min: 5,   max: 30, default: 12,  unit: 'ms',  format: (v) => `${v.toFixed(1)}` },
     { id: CHORUS_PARAM.DRY_WET,  label: 'Mix',   description: 'Wet/dry blend.',     min: 0,   max: 1,  default: 0.5,              format: (v) => `${Math.round(v * 100)}%` },
   ],
 }

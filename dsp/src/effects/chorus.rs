@@ -13,9 +13,9 @@ use crate::utils::delay_line::DelayLine;
 use crate::utils::math::smoothing_alpha;
 use core::f32::consts::TAU; // 2π
 
-pub const PARAM_RATE: u32 = 0;     // LFO rate Hz  0.1 – 5.0,  default 1.5
-pub const PARAM_DEPTH: u32 = 1;    // Mod depth  0–1 (→ 0–12 ms),  default 0.5
-pub const PARAM_DELAY_MS: u32 = 2; // Base delay ms  5–30,  default 15.0
+pub const PARAM_RATE: u32 = 0;     // LFO rate Hz  0.1 – 3.0,  default 0.8
+pub const PARAM_DEPTH: u32 = 1;    // Mod depth  0–1 (→ 0–3 ms),  default 0.5
+pub const PARAM_DELAY_MS: u32 = 2; // Base delay ms  5–30,  default 12.0
 pub const PARAM_DRY_WET: u32 = 3;  // 0–1,  default 0.5
 
 /// Max chorus delay: 50 ms @ 48 kHz = 2400 samples → next pow2 = 4096.
@@ -54,15 +54,15 @@ impl Chorus {
                 DelayLine::new(MAX_DELAY_SAMPLES),
             ],
             lfo_phase: [0.0, phase_offset, phase_offset * 2.0],
-            target_rate: 1.5,
-            smoothed_rate: 1.5,
+            target_rate: 0.8,
+            smoothed_rate: 0.8,
             target_depth: 0.5,
             smoothed_depth: 0.5,
-            target_delay_ms: 15.0,
-            smoothed_delay_ms: 15.0,
+            target_delay_ms: 12.0,
+            smoothed_delay_ms: 12.0,
             target_dry_wet: 0.5,
             smoothed_dry_wet: 0.5,
-            smoother_alpha: smoothing_alpha(SMOOTH_TIME_SEC, sample_rate),
+            smoother_alpha: smoothing_alpha(0.010, sample_rate),
         }
     }
 }
@@ -84,7 +84,8 @@ impl Effect for Chorus {
 
             let base_samples = (self.smoothed_delay_ms * 0.001 * sr).max(1.0);
             // Depth mapped: 0–1 → 0–12 ms in samples.
-            let depth_samples = self.smoothed_depth * 0.012 * sr;
+            // Depth 0–1 → 0–3 ms: ±15 cents max pitch deviation at 0.8 Hz, natural chorus range.
+            let depth_samples = self.smoothed_depth * 0.003 * sr;
 
             let x = input[i];
             let mut wet_sum = 0.0_f32;
@@ -113,7 +114,7 @@ impl Effect for Chorus {
 
     fn set_param(&mut self, param_id: u32, value: f32) {
         match param_id {
-            PARAM_RATE => self.target_rate = value.clamp(0.1, 5.0),
+            PARAM_RATE => self.target_rate = value.clamp(0.1, 3.0),
             PARAM_DEPTH => self.target_depth = value.clamp(0.0, 1.0),
             PARAM_DELAY_MS => self.target_delay_ms = value.clamp(5.0, 30.0),
             PARAM_DRY_WET => self.target_dry_wet = value.clamp(0.0, 1.0),
