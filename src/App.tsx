@@ -4,6 +4,7 @@ import { getStatus, subscribe, type EngineStatus } from '@/audio/engine'
 import { useAudioStore } from '@/store/audioStore'
 import { useEducationStore } from '@/store/educationStore'
 import { usePresetStore } from '@/store/presetStore'
+import { useUiStore } from '@/store/uiStore'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
@@ -25,6 +26,27 @@ const STATUS_DOT: Record<EngineStatus, string> = {
   error: 'bg-red-500',
 }
 
+interface PanelToggleProps {
+  label: string
+  active: boolean
+  onClick: () => void
+}
+
+function PanelToggle({ label, active, onClick }: PanelToggleProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition ${
+        active
+          ? 'bg-zinc-700 text-zinc-200'
+          : 'text-zinc-600 hover:text-zinc-400'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
 function App() {
   const [status, setStatus] = useState<EngineStatus>(getStatus().status)
   useEffect(() => subscribe((s) => setStatus(s)), [])
@@ -33,10 +55,21 @@ function App() {
   useEffect(() => { void loadUserPresets() }, [loadUserPresets])
 
   const currentFile = useAudioStore((s) => s.currentFile)
-  const mode = useEducationStore((s) => s.mode)
-  const language = useEducationStore((s) => s.language)
-  const setMode = useEducationStore((s) => s.setMode)
+  const mode        = useEducationStore((s) => s.mode)
+  const language    = useEducationStore((s) => s.language)
+  const setMode     = useEducationStore((s) => s.setMode)
   const setLanguage = useEducationStore((s) => s.setLanguage)
+
+  const showWaveform   = useUiStore((s) => s.showWaveform)
+  const showVisualizer = useUiStore((s) => s.showVisualizer)
+  const showEducation  = useUiStore((s) => s.showEducation)
+  const toggleWaveform   = useUiStore((s) => s.toggleWaveform)
+  const toggleVisualizer = useUiStore((s) => s.toggleVisualizer)
+  const toggleEducation  = useUiStore((s) => s.toggleEducation)
+
+  const waveLabel = language === 'ro' ? 'Waveform' : 'Waveform'
+  const vizLabel  = language === 'ro' ? 'Vizualizări' : 'Visualizers'
+  const eduLabel  = language === 'ro' ? 'Educație' : 'Education'
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
@@ -48,6 +81,15 @@ function App() {
           <span className="text-xs text-zinc-500">Mini-DAW Educațional</span>
         </div>
         <div className="flex items-center gap-5 text-xs">
+          {/* Panel visibility toggles — only shown when a file is loaded */}
+          {currentFile && (
+            <div className="flex items-center gap-1 rounded-md border border-zinc-800 p-0.5">
+              <PanelToggle label={waveLabel}  active={showWaveform}   onClick={toggleWaveform} />
+              <PanelToggle label={vizLabel}   active={showVisualizer} onClick={toggleVisualizer} />
+              <PanelToggle label={eduLabel}   active={showEducation}  onClick={toggleEducation} />
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <span className="text-zinc-500">Mode</span>
             <Switch.Root
@@ -86,10 +128,10 @@ function App() {
       <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-8">
         {currentFile ? (
           <>
-            <WaveformView />
-            <VisualizerPanel />
-            <InfoPanel />
-            <RecommendationsPanel />
+            {showWaveform   && <WaveformView />}
+            {showVisualizer && <VisualizerPanel />}
+            {showEducation  && <InfoPanel />}
+            {showEducation  && <RecommendationsPanel />}
             <EffectsRack />
           </>
         ) : (
