@@ -8,13 +8,16 @@
  */
 
 import {
+  CHORUS_PARAM,
   COMPRESSOR_PARAM,
   DELAY_PARAM,
   EQ_BAND_PARAM,
   EQ_BANDS,
+  FLANGER_PARAM,
   GAIN_PARAM,
   GATE_PARAM,
   LIMITER_PARAM,
+  PITCH_SHIFT_PARAM,
   REVERB_PARAM,
   SATURATION_PARAM,
   EffectType,
@@ -54,6 +57,9 @@ function isDelay(e: EffectInstance) { return e.type === EffectType.Delay }
 function isReverb(e: EffectInstance) { return e.type === EffectType.Reverb }
 function isSaturation(e: EffectInstance) { return e.type === EffectType.Saturation }
 function isGain(e: EffectInstance) { return e.type === EffectType.Gain }
+function isChorus(e: EffectInstance) { return e.type === EffectType.Chorus }
+function isFlanger(e: EffectInstance) { return e.type === EffectType.Flanger }
+function isPitchShift(e: EffectInstance) { return e.type === EffectType.PitchShift }
 
 // ─── Style A — per-effect rules ──────────────────────────────────────────
 
@@ -801,19 +807,119 @@ function analyzeChain(chain: EffectInstance[]): FeedbackEntry[] {
   return out
 }
 
+function analyzeChorus(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const rate  = paramOf(effect, CHORUS_PARAM.RATE, 1.5)
+  const depth = paramOf(effect, CHORUS_PARAM.DEPTH, 0.5)
+  const mix   = paramOf(effect, CHORUS_PARAM.DRY_WET, 0.5)
+
+  if (rate > 3.5) {
+    out.push({
+      id: `chorus:fast-rate:${effect.id}`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: { beginner: 'Rate-ul mare (>3.5 Hz) face chorus-ul să sune ca vibrato. Încearcă sub 2 Hz pentru un efect mai natural.', advanced: 'LFO >3.5 Hz → frecvența de modulație intră în zona de vibrato perceptibil. Sub 2 Hz pentru chorus pur, fără artefacte de pitch.' },
+      en: { beginner: 'High rate (>3.5 Hz) makes chorus sound like vibrato. Try below 2 Hz for a more natural effect.', advanced: 'LFO >3.5 Hz → modulation frequency enters perceptible vibrato range. Below 2 Hz for pure chorus without pitch artifacts.' },
+    })
+  }
+  if (mix > 0.8) {
+    out.push({
+      id: `chorus:high-mix:${effect.id}`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: { beginner: 'Mix mare înseamnă că ai puțin semnal original. Încearcă 40–60 % pentru un sunet mai echilibrat.', advanced: 'Wet >80 % — semnalul dry e prea atenuat. Chorus tipic: 40–60 % wet pentru a păstra coerența în mix.' },
+      en: { beginner: 'High mix means little original signal. Try 40–60 % for a more balanced sound.', advanced: 'Wet >80 % — dry signal is overly attenuated. Typical chorus: 40–60 % wet to preserve mix coherence.' },
+    })
+  }
+  if (depth < 0.1 && rate < 0.5) {
+    out.push({
+      id: `chorus:ineffective:${effect.id}`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: { beginner: 'Depth și Rate mici — efectul e aproape imperceptibil. Crește cel puțin unul din ei.', advanced: 'Depth <10 % și Rate <0.5 Hz → modulare sub pragul perceptibil. Crește depth sau rate pentru a activa efectul.' },
+      en: { beginner: 'Low depth and rate — effect is nearly imperceptible. Increase at least one.', advanced: 'Depth <10 % and Rate <0.5 Hz → modulation below perceptible threshold. Increase depth or rate to activate the effect.' },
+    })
+  }
+  return out
+}
+
+function analyzeFlanger(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const feedback = paramOf(effect, FLANGER_PARAM.FEEDBACK, 0.5)
+  const rate     = paramOf(effect, FLANGER_PARAM.RATE, 0.5)
+
+  if (Math.abs(feedback) > 0.85) {
+    out.push({
+      id: `flanger:high-feedback:${effect.id}`,
+      severity: 'warning',
+      effectIds: [effect.id],
+      ro: { beginner: 'Feedback mare (>85 %) poate crea un sunet exagerat de rezonant sau instabil. Coboară sub 70 % pentru siguranță.', advanced: 'Feedback >±0.85 → rezonanță ridicată a comb-filter-ului. Riscul de auto-oscillation crește. Limitat la 0.95 în engine, dar valorile de peste 0.85 pot suna neplăcut.' },
+      en: { beginner: 'High feedback (>85 %) can create an overly resonant or unstable sound. Lower below 70 % for safety.', advanced: 'Feedback >±0.85 → high comb-filter resonance. Auto-oscillation risk increases. Engine caps at 0.95 but values above 0.85 can sound unpleasant.' },
+    })
+  }
+  if (rate > 4) {
+    out.push({
+      id: `flanger:fast-rate:${effect.id}`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: { beginner: 'Rate rapid (>4 Hz) face flangerul să sune mai mult ca un vibrato metalic. Sub 2 Hz pentru efectul clasic.', advanced: 'LFO >4 Hz → sweep-ul comb-filter-ului intră în zona de frecvență audibilă ca variație de pitch. Classic flanger: 0.1–1 Hz.' },
+      en: { beginner: 'Fast rate (>4 Hz) makes the flanger sound more like metallic vibrato. Below 2 Hz for classic effect.', advanced: 'LFO >4 Hz → comb sweep enters audible pitch variation zone. Classic flanger: 0.1–1 Hz.' },
+    })
+  }
+  return out
+}
+
+function analyzePitchShift(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const semitones = paramOf(effect, PITCH_SHIFT_PARAM.SEMITONES, 0)
+  const mix       = paramOf(effect, PITCH_SHIFT_PARAM.DRY_WET, 1)
+
+  if (semitones === 0 && mix > 0.5) {
+    out.push({
+      id: `pitch:zero-semitones:${effect.id}`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: { beginner: 'Semitones = 0 înseamnă că pitch-ul nu se schimbă. Ajustează valoarea pentru a auzi efectul.', advanced: 'Pitch ratio = 2^(0/12) = 1.0 → fără transpoziție. Efectul procesează audio fără modificare — setează semitones ≠ 0.' },
+      en: { beginner: 'Semitones = 0 means pitch is unchanged. Adjust the value to hear the effect.', advanced: 'Pitch ratio = 2^(0/12) = 1.0 → no transposition. Effect processes audio without change — set semitones ≠ 0.' },
+    })
+  }
+  if (Math.abs(semitones) > 7 && mix > 0.7) {
+    out.push({
+      id: `pitch:large-shift:${effect.id}`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: { beginner: 'Transpoziție mare (>7 semitone) la mix ridicat poate crea artefacte audibile. Încearcă un mix de 50–70 %.', advanced: 'Transpoziție >±7 st → ratio >1.5 sau <0.67. Algoritmul granular devine mai vizibil; amestecul cu dry (mix 50–70 %) maschează artefactele de grain.' },
+      en: { beginner: 'Large shift (>7 semitones) at high mix can create audible artifacts. Try 50–70 % mix.', advanced: 'Shift >±7 st → ratio >1.5 or <0.67. Granular algorithm becomes more audible; blending with dry (mix 50–70 %) masks grain artifacts.' },
+    })
+  }
+  if (mix > 0.3 && mix < 0.7 && semitones !== 0) {
+    out.push({
+      id: `pitch:harmonizer:${effect.id}`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: { beginner: 'Mix de 30–70 % cu transpoziție activă creează un efect de harmonizer — originalul și nota transpusă se aud împreună.', advanced: 'Crossfade dry/wet la 30–70 % cu semitones ≠ 0 → harmonizer. Intervalul creat: semitones față de fundamental. Uzual: +3 st (terță minoră), +4 (terță majoră), +7 (cvintă).' },
+      en: { beginner: '30–70 % mix with active pitch shift creates a harmonizer — you hear both the original and transposed note.', advanced: 'Dry/wet crossfade at 30–70 % with semitones ≠ 0 → harmonizer. Created interval: semitones relative to fundamental. Common: +3 st (minor third), +4 (major third), +7 (fifth).' },
+    })
+  }
+  return out
+}
+
 // ─── public API ──────────────────────────────────────────────────────────
 
 export function analyzeAll(effects: EffectInstance[]): FeedbackEntry[] {
   const out: FeedbackEntry[] = []
   for (const e of effects) {
-    if (isCompressor(e))  out.push(...analyzeCompressor(e))
-    else if (isEq(e))         out.push(...analyzeEq(e))
-    else if (isGain(e))       out.push(...analyzeGain(e))
-    else if (isGate(e))       out.push(...analyzeGate(e))
-    else if (isLimiter(e))    out.push(...analyzeLimiter(e))
-    else if (isDelay(e))      out.push(...analyzeDelay(e))
-    else if (isReverb(e))     out.push(...analyzeReverb(e))
-    else if (isSaturation(e)) out.push(...analyzeSaturation(e))
+    if (isCompressor(e))       out.push(...analyzeCompressor(e))
+    else if (isEq(e))          out.push(...analyzeEq(e))
+    else if (isGain(e))        out.push(...analyzeGain(e))
+    else if (isGate(e))        out.push(...analyzeGate(e))
+    else if (isLimiter(e))     out.push(...analyzeLimiter(e))
+    else if (isDelay(e))       out.push(...analyzeDelay(e))
+    else if (isReverb(e))      out.push(...analyzeReverb(e))
+    else if (isSaturation(e))  out.push(...analyzeSaturation(e))
+    else if (isChorus(e))      out.push(...analyzeChorus(e))
+    else if (isFlanger(e))     out.push(...analyzeFlanger(e))
+    else if (isPitchShift(e))  out.push(...analyzePitchShift(e))
   }
   out.push(...analyzeChain(effects))
   out.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])

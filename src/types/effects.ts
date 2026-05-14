@@ -10,6 +10,9 @@ export const EffectType = {
   Delay: 5,
   Reverb: 6,
   Saturation: 7,
+  Chorus: 8,
+  Flanger: 9,
+  PitchShift: 10,
 } as const
 
 export type EffectType = (typeof EffectType)[keyof typeof EffectType]
@@ -402,6 +405,65 @@ export const SATURATION_DEFINITION: EffectDefinition = {
   ],
 }
 
+// ─── Chorus ──────────────────────────────────────────────────────────────
+
+export const CHORUS_PARAM = {
+  RATE:    0,
+  DEPTH:   1,
+  DELAY_MS: 2,
+  DRY_WET: 3,
+} as const
+
+export const CHORUS_DEFINITION: EffectDefinition = {
+  type: EffectType.Chorus,
+  label: 'Chorus',
+  description: '3-voice LFO-modulated delay — thickens and widens the signal.',
+  params: [
+    { id: CHORUS_PARAM.RATE,     label: 'Rate',  description: 'LFO speed.',         min: 0.1, max: 5,  default: 1.5, unit: 'Hz',  format: (v) => `${v.toFixed(2)}` },
+    { id: CHORUS_PARAM.DEPTH,    label: 'Depth', description: 'Modulation depth.',  min: 0,   max: 1,  default: 0.5,              format: (v) => `${Math.round(v * 100)}%` },
+    { id: CHORUS_PARAM.DELAY_MS, label: 'Delay', description: 'Base delay time.',   min: 5,   max: 30, default: 15,  unit: 'ms',  format: (v) => `${v.toFixed(1)}` },
+    { id: CHORUS_PARAM.DRY_WET,  label: 'Mix',   description: 'Wet/dry blend.',     min: 0,   max: 1,  default: 0.5,              format: (v) => `${Math.round(v * 100)}%` },
+  ],
+}
+
+// ─── Flanger ─────────────────────────────────────────────────────────────
+
+export const FLANGER_PARAM = {
+  RATE:     0,
+  DEPTH:    1,
+  FEEDBACK: 2,
+  DRY_WET:  3,
+} as const
+
+export const FLANGER_DEFINITION: EffectDefinition = {
+  type: EffectType.Flanger,
+  label: 'Flanger',
+  description: 'Short LFO delay with feedback — metallic comb-filter sweep.',
+  params: [
+    { id: FLANGER_PARAM.RATE,     label: 'Rate',     description: 'LFO speed.',        min: 0.05, max: 5,    default: 0.5,  unit: 'Hz', format: (v) => `${v.toFixed(2)}` },
+    { id: FLANGER_PARAM.DEPTH,    label: 'Depth',    description: 'Modulation depth.', min: 0,    max: 1,    default: 0.7,              format: (v) => `${Math.round(v * 100)}%` },
+    { id: FLANGER_PARAM.FEEDBACK, label: 'Feedback', description: 'Feedback amount.',  min: -0.95, max: 0.95, default: 0.5,             format: (v) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%` },
+    { id: FLANGER_PARAM.DRY_WET,  label: 'Mix',      description: 'Wet/dry blend.',    min: 0,    max: 1,    default: 0.5,              format: (v) => `${Math.round(v * 100)}%` },
+  ],
+}
+
+// ─── Pitch Shift ─────────────────────────────────────────────────────────
+
+export const PITCH_SHIFT_PARAM = {
+  SEMITONES: 0,
+  DRY_WET:   1,
+} as const
+
+export const PITCH_SHIFT_DEFINITION: EffectDefinition = {
+  type: EffectType.PitchShift,
+  label: 'Pitch Shift',
+  description: 'Granular pitch shifter — transposes pitch without changing speed.',
+  params: [
+    { id: PITCH_SHIFT_PARAM.SEMITONES, label: 'Semitones', description: 'Pitch shift in semitones.', min: -12, max: 12, default: 0, unit: 'st', step: 0.5, format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}` },
+    { id: PITCH_SHIFT_PARAM.DRY_WET,   label: 'Mix',       description: 'Wet/dry blend.',            min: 0,   max: 1,  default: 1,              format: (v) => `${Math.round(v * 100)}%` },
+  ],
+}
+
 export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.Gain]: GAIN_DEFINITION,
   [EffectType.Compressor]: COMPRESSOR_DEFINITION,
@@ -411,4 +473,7 @@ export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.Delay]: DELAY_DEFINITION,
   [EffectType.Reverb]: REVERB_DEFINITION,
   [EffectType.Saturation]: SATURATION_DEFINITION,
+  [EffectType.Chorus]: CHORUS_DEFINITION,
+  [EffectType.Flanger]: FLANGER_DEFINITION,
+  [EffectType.PitchShift]: PITCH_SHIFT_DEFINITION,
 }

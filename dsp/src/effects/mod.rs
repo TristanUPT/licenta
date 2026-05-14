@@ -3,12 +3,15 @@
 //! Each effect implements the `Effect` trait. Param IDs are private to the
 //! effect — they are u32 constants exported alongside each implementation.
 
+pub mod chorus;
 pub mod compressor;
 pub mod delay;
 pub mod eq;
+pub mod flanger;
 pub mod gain;
 pub mod gate;
 pub mod limiter;
+pub mod pitch_shift;
 pub mod reverb;
 pub mod saturation;
 
@@ -23,6 +26,9 @@ pub enum EffectType {
     Delay = 5,
     Reverb = 6,
     Saturation = 7,
+    Chorus = 8,
+    Flanger = 9,
+    PitchShift = 10,
 }
 
 impl EffectType {
@@ -36,6 +42,9 @@ impl EffectType {
             5 => Some(EffectType::Delay),
             6 => Some(EffectType::Reverb),
             7 => Some(EffectType::Saturation),
+            8 => Some(EffectType::Chorus),
+            9 => Some(EffectType::Flanger),
+            10 => Some(EffectType::PitchShift),
             _ => None,
         }
     }
@@ -58,5 +67,8 @@ pub fn build(effect_type: EffectType, sample_rate: f32) -> Box<dyn Effect> {
         EffectType::Delay => Box::new(delay::Delay::new(sample_rate)),
         EffectType::Reverb => Box::new(reverb::Reverb::new(sample_rate)),
         EffectType::Saturation => Box::new(saturation::Saturation::new(sample_rate)),
+        EffectType::Chorus => Box::new(chorus::Chorus::new(sample_rate)),
+        EffectType::Flanger => Box::new(flanger::Flanger::new(sample_rate)),
+        EffectType::PitchShift => Box::new(pitch_shift::PitchShift::new(sample_rate)),
     }
 }

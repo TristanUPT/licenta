@@ -13,6 +13,9 @@ import { Limiter } from '@/components/effects/Limiter'
 import { Delay } from '@/components/effects/Delay'
 import { Reverb } from '@/components/effects/Reverb'
 import { Saturation } from '@/components/effects/Saturation'
+import { Chorus } from '@/components/effects/Chorus'
+import { Flanger } from '@/components/effects/Flanger'
+import { PitchShift } from '@/components/effects/PitchShift'
 
 function renderEffect(instance: EffectInstance) {
   switch (instance.type) {
@@ -24,6 +27,9 @@ function renderEffect(instance: EffectInstance) {
     case EffectType.Delay:        return <Delay instance={instance} />
     case EffectType.Reverb:       return <Reverb instance={instance} />
     case EffectType.Saturation:   return <Saturation instance={instance} />
+    case EffectType.Chorus:       return <Chorus instance={instance} />
+    case EffectType.Flanger:      return <Flanger instance={instance} />
+    case EffectType.PitchShift:   return <PitchShift instance={instance} />
     default:                      return null
   }
 }

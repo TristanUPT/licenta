@@ -644,6 +644,124 @@ const SATURATION_DOCS: EffectDocs = {
   },
 }
 
+const CHORUS_DOCS: EffectDocs = {
+  title: { ro: 'Chorus', en: 'Chorus' },
+  summary: {
+    ro: {
+      beginner: 'Îngroașă și lărgește sunetul adăugând 3 copii ușor decalate și modulate ale semnalului — similar cu mai mulți muzicieni cântând împreună.',
+      advanced: 'Modulare LFO a 3 linii de delay scurte (5–30 ms) cu faze la 0/2π/3/4π/3. Amestecul vocilor creează un spectru de beating între fundamentalele ușor detuned.',
+    },
+    en: {
+      beginner: 'Thickens and widens sound by adding 3 slightly pitch-shifted copies of the signal — like multiple musicians playing together.',
+      advanced: 'LFO modulation of 3 short delay lines (5–30 ms) with phases at 0/2π/3/4π/3. Voice mixing creates beating across slightly detuned fundamentals.',
+    },
+  },
+  params: {
+    0: {
+      title: { ro: 'Rate', en: 'Rate' },
+      body: {
+        ro: { beginner: 'Cât de rapid oscilează pitch-ul copiilor. Valori mici = mișcare lentă, hipnotică; valori mari = vibrato rapid.', advanced: 'Frecvența LFO în Hz. Sub 1 Hz = chorus lent/warm; 1–3 Hz = chorus clasic; peste 3 Hz → vibrato perceput.' },
+        en: { beginner: 'How fast the pitch of the copies oscillates. Low = slow, hypnotic motion; high = fast vibrato.', advanced: 'LFO frequency in Hz. Below 1 Hz = slow/warm chorus; 1–3 Hz = classic chorus; above 3 Hz → perceived as vibrato.' },
+      },
+    },
+    1: {
+      title: { ro: 'Depth', en: 'Depth' },
+      body: {
+        ro: { beginner: 'Cât de mult variază pitch-ul copiilor. Adâncime mică = subtil; mare = detuning evident.', advanced: 'Amplitudinea modulării LFO în ms (0–12 ms). Crește variația de frecvență instantanee: Δf ≈ depth_ms × rate × 2π.' },
+        en: { beginner: 'How much the copies detune. Low = subtle; high = obvious pitch wobble.', advanced: 'LFO modulation amplitude in ms (0–12 ms). Increases instantaneous frequency variation: Δf ≈ depth_ms × rate × 2π.' },
+      },
+    },
+    2: {
+      title: { ro: 'Delay', en: 'Delay' },
+      body: {
+        ro: { beginner: 'Cât de mult sunt decalate temporal copiile față de original. Mai mare = separare mai clară între voci.', advanced: 'Base delay în ms pentru toate 3 vocile. Sub 5 ms → flanger perceptibil; 5–30 ms → zona chorus clară.' },
+        en: { beginner: 'How much the copies are delayed relative to the original. Higher = clearer separation between voices.', advanced: 'Base delay in ms for all 3 voices. Below 5 ms → flanger-like comb; 5–30 ms → clear chorus zone.' },
+      },
+    },
+    3: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: '0 % = semnal original, 100 % = numai vocile modulate. 40–60 % este tipic.', advanced: 'Crossfade linear dry/wet. Chorus clasic foloseste ~50 %; pentru send-effect, wet = 100 % și controlezi via bus.' },
+        en: { beginner: '0 % = original signal, 100 % = only the modulated voices. 40–60 % is typical.', advanced: 'Linear dry/wet crossfade. Classic chorus uses ~50 %; for send-effect use wet = 100 % and control via bus.' },
+      },
+    },
+  },
+}
+
+const FLANGER_DOCS: EffectDocs = {
+  title: { ro: 'Flanger', en: 'Flanger' },
+  summary: {
+    ro: {
+      beginner: 'Creează un sunet "metalic" sau "jet de avion" prin combinarea semnalului cu o copie scurt-întârziată și modulată.',
+      advanced: 'Filtru comb cu LFO: un singur delay de 0.5–7 ms modulat sinusoidal + feedback. Anulările de fază la intervalele de frecvență ale delay-ului creează dantelătura spectral caracteristică.',
+    },
+    en: {
+      beginner: 'Creates a "metallic" or "jet plane" sound by combining the signal with a short, LFO-modulated copy.',
+      advanced: 'LFO-swept comb filter: single 0.5–7 ms sinusoidal delay + feedback. Phase cancellations at delay-harmonic intervals create the characteristic spectral notching.',
+    },
+  },
+  params: {
+    0: {
+      title: { ro: 'Rate', en: 'Rate' },
+      body: {
+        ro: { beginner: 'Viteza oscilației efectului. Lent = sweep leneș; rapid = efect pronunțat.', advanced: 'LFO Hz. Sub 0.5 Hz = sweep lent/psihedelicc; 0.5–2 Hz = flanger clasic; peste 3 Hz → vibrato de frecvență.' },
+        en: { beginner: 'Speed of the sweep effect. Slow = lazy; fast = intense effect.', advanced: 'LFO Hz. Below 0.5 Hz = slow/psychedelic sweep; 0.5–2 Hz = classic flanger; above 3 Hz → pitch vibrato.' },
+      },
+    },
+    1: {
+      title: { ro: 'Depth', en: 'Depth' },
+      body: {
+        ro: { beginner: 'Cât de pronunțat e efectul de sweep. La 0 = aproape neutru; la 1 = efect maxim.', advanced: 'Amplitudinea LFO în ms (0–5 ms). Controlează lățimea benzii notch-urilor în sweep.' },
+        en: { beginner: 'How pronounced the sweep effect is. At 0 = nearly neutral; at 1 = maximum effect.', advanced: 'LFO amplitude in ms (0–5 ms). Controls the bandwidth of the notch sweep.' },
+      },
+    },
+    2: {
+      title: { ro: 'Feedback', en: 'Feedback' },
+      body: {
+        ro: { beginner: 'Câtă rezonanță are efectul. Pozitiv = notch-uri mai adânci; negativ = efect inversat.', advanced: 'Gain pe feedback path. Valorile mari (±0.9) exacerbează notch-urile în comb filter → rezonanță pronunțată. Negativ inversează faza feedback-ului.' },
+        en: { beginner: 'How resonant the effect is. Positive = deeper notches; negative = inverted effect.', advanced: 'Feedback path gain. High values (±0.9) deepen comb filter notches → pronounced resonance. Negative inverts the feedback phase.' },
+      },
+    },
+    3: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: '0 % = semnal curat; 100 % = numai semnalul flancat. 50 % oferă efectul clasic.', advanced: 'Crossfade dry/wet. La 50 % se obțin notch-uri complete prin interferință distructivă. Sub 50 % = efect mai subtil.' },
+        en: { beginner: '0 % = clean signal; 100 % = only flanged signal. 50 % gives the classic effect.', advanced: 'Dry/wet crossfade. At 50 % full notches appear via destructive interference. Below 50 % = more subtle.' },
+      },
+    },
+  },
+}
+
+const PITCH_SHIFT_DOCS: EffectDocs = {
+  title: { ro: 'Pitch Shift', en: 'Pitch Shift' },
+  summary: {
+    ro: {
+      beginner: 'Ridică sau coboară înălțimea sunetului fără a schimba viteza redării — ca un capodag virtual.',
+      advanced: 'Pitch shifter granular cu 2 grain-heads suprapuse în buffer-ul de 8192 samples, ferestre Hann de 2048 samples. Read speed = 2^(semitones/12), crossfade previne artefactele la granița grainurilor.',
+    },
+    en: {
+      beginner: 'Raises or lowers the pitch without changing playback speed — like a virtual capo.',
+      advanced: 'Granular pitch shifter with 2 overlapping grain-heads in an 8192-sample ring buffer, 2048-sample Hann windows. Read speed = 2^(semitones/12), crossfade prevents grain boundary artifacts.',
+    },
+  },
+  params: {
+    0: {
+      title: { ro: 'Semitone', en: 'Semitone' },
+      body: {
+        ro: { beginner: 'Cât de mult e schimbată înălțimea. +12 = o octavă sus; -12 = o octavă jos; 0 = neschimbat.', advanced: 'Pitch ratio = 2^(st/12). La ±12 st se dublează/înjumătățește frecvența fundamentalei. Valori fracționale permit micro-tuning în cents (0.5 st = 50 cents).' },
+        en: { beginner: 'How much the pitch is shifted. +12 = one octave up; -12 = one octave down; 0 = unchanged.', advanced: 'Pitch ratio = 2^(st/12). At ±12 st, the fundamental doubles/halves. Fractional values allow micro-tuning in cents (0.5 st = 50 cents).' },
+      },
+    },
+    1: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: '100 % = numai sunetul transpus; 0 % = original. Amestecul cu originalul creează efecte de harmonizer.', advanced: 'Crossfade dry/wet. La valori intermediare (40–60 %) efectul devine harmonizer — originalul și transpusul coexistă creând intervale armonice.' },
+        en: { beginner: '100 % = only transposed sound; 0 % = original. Mixing with original creates harmonizer effects.', advanced: 'Dry/wet crossfade. At intermediate values (40–60 %) the effect becomes a harmonizer — original and transposed coexist creating harmonic intervals.' },
+      },
+    },
+  },
+}
+
 export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Gain]: GAIN_DOCS,
   [EffectType.Compressor]: COMPRESSOR_DOCS,
@@ -653,6 +771,9 @@ export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Delay]: DELAY_DOCS,
   [EffectType.Reverb]: REVERB_DOCS,
   [EffectType.Saturation]: SATURATION_DOCS,
+  [EffectType.Chorus]: CHORUS_DOCS,
+  [EffectType.Flanger]: FLANGER_DOCS,
+  [EffectType.PitchShift]: PITCH_SHIFT_DOCS,
 }
 
 import type { EducationLanguage, EducationMode } from '@/store/educationStore'
