@@ -4,12 +4,14 @@ import { useEducationStore } from '@/store/educationStore'
 const STORAGE_KEY = 'soundlab-kb-hint-dismissed'
 
 const SHORTCUTS = [
-  { key: 'Space', ro: 'Play / Pause',         en: 'Play / Pause' },
-  { key: 'S',     ro: 'Stop',                  en: 'Stop' },
-  { key: 'L',     ro: 'Toggle loop',           en: 'Toggle loop' },
-  { key: 'I',     ro: 'Set loop in',           en: 'Set loop in' },
-  { key: 'O',     ro: 'Set loop out',          en: 'Set loop out' },
-  { key: 'B',     ro: 'A/B bypass',            en: 'A/B bypass' },
+  { key: 'Space',   ro: 'Play / Pause',         en: 'Play / Pause' },
+  { key: 'S',       ro: 'Stop',                  en: 'Stop' },
+  { key: 'L',       ro: 'Toggle loop',           en: 'Toggle loop' },
+  { key: 'I',       ro: 'Set loop in',           en: 'Set loop in' },
+  { key: 'O',       ro: 'Set loop out',          en: 'Set loop out' },
+  { key: 'B',       ro: 'A/B bypass',            en: 'A/B bypass' },
+  { key: 'Ctrl+Z',  ro: 'Undo efecte',           en: 'Undo effects' },
+  { key: 'Ctrl+Y',  ro: 'Redo efecte',           en: 'Redo effects' },
 ]
 
 export function KeyboardHint() {

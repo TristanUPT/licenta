@@ -13,6 +13,8 @@ export const EffectType = {
   Chorus: 8,
   Flanger: 9,
   PitchShift: 10,
+  Phaser: 11,
+  TransientShaper: 12,
 } as const
 
 export type EffectType = (typeof EffectType)[keyof typeof EffectType]
@@ -464,6 +466,59 @@ export const PITCH_SHIFT_DEFINITION: EffectDefinition = {
   ],
 }
 
+// ─── Phaser ──────────────────────────────────────────────────────────────
+
+export const PHASER_PARAM = {
+  RATE:      0,
+  DEPTH:     1,
+  CENTER_HZ: 2,
+  FEEDBACK:  3,
+  STAGES:    4,
+  DRY_WET:   5,
+} as const
+
+const PHASER_STAGES_OPTIONS = [
+  { value: 2, label: '2' },
+  { value: 4, label: '4' },
+  { value: 6, label: '6' },
+  { value: 8, label: '8' },
+]
+
+export const PHASER_DEFINITION: EffectDefinition = {
+  type: EffectType.Phaser,
+  label: 'Phaser',
+  description: 'All-pass stage cascade with LFO sweep — classic "swoosh" sound.',
+  params: [
+    { id: PHASER_PARAM.RATE,      label: 'Rate',    description: 'LFO speed.',               min: 0.05, max: 5,    default: 0.5,   unit: 'Hz', format: (v) => `${v.toFixed(2)}` },
+    { id: PHASER_PARAM.DEPTH,     label: 'Depth',   description: 'LFO modulation depth.',    min: 0,    max: 1,    default: 0.7,               format: (v) => `${Math.round(v * 100)}%` },
+    { id: PHASER_PARAM.CENTER_HZ, label: 'Center',  description: 'Center sweep frequency.',  min: 100,  max: 4000, default: 1200,  unit: 'Hz', scale: 'log', format: (v) => v < 1000 ? `${v.toFixed(0)}` : `${(v / 1000).toFixed(1)}k` },
+    { id: PHASER_PARAM.FEEDBACK,  label: 'Feedback',description: 'Notch depth via feedback.',min: -0.95, max: 0.95, default: 0.5,             format: (v) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%` },
+    { id: PHASER_PARAM.STAGES,    label: 'Stages',  description: 'Number of all-pass stages.',min: 2,   max: 8,    default: 4,     scale: 'enum', options: PHASER_STAGES_OPTIONS, format: (v) => `${Math.round(v)}` },
+    { id: PHASER_PARAM.DRY_WET,   label: 'Mix',     description: 'Wet/dry blend.',           min: 0,    max: 1,    default: 0.5,               format: (v) => `${Math.round(v * 100)}%` },
+  ],
+}
+
+// ─── Transient Shaper ─────────────────────────────────────────────────────
+
+export const TRANSIENT_PARAM = {
+  ATTACK_GAIN_DB:  0,
+  SUSTAIN_GAIN_DB: 1,
+  SENSITIVITY:     2,
+  DRY_WET:         3,
+} as const
+
+export const TRANSIENT_DEFINITION: EffectDefinition = {
+  type: EffectType.TransientShaper,
+  label: 'Transient Shaper',
+  description: 'Independently controls attack punch and sustain body of the signal.',
+  params: [
+    { id: TRANSIENT_PARAM.ATTACK_GAIN_DB,  label: 'Attack',   description: 'Boost or cut the initial transient punch.',  min: -12, max: 12, default: 6,   unit: 'dB', format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}` },
+    { id: TRANSIENT_PARAM.SUSTAIN_GAIN_DB, label: 'Sustain',  description: 'Boost or cut the sustained body.',           min: -12, max: 12, default: 0,   unit: 'dB', format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}` },
+    { id: TRANSIENT_PARAM.SENSITIVITY,     label: 'Sense',    description: 'Detection speed — higher = faster reaction.',min: 0,   max: 1,  default: 0.5,             format: (v) => `${Math.round(v * 100)}%` },
+    { id: TRANSIENT_PARAM.DRY_WET,         label: 'Mix',      description: 'Wet/dry blend.',                             min: 0,   max: 1,  default: 1,               format: (v) => `${Math.round(v * 100)}%` },
+  ],
+}
+
 export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.Gain]: GAIN_DEFINITION,
   [EffectType.Compressor]: COMPRESSOR_DEFINITION,
@@ -476,4 +531,6 @@ export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.Chorus]: CHORUS_DEFINITION,
   [EffectType.Flanger]: FLANGER_DEFINITION,
   [EffectType.PitchShift]: PITCH_SHIFT_DEFINITION,
+  [EffectType.Phaser]: PHASER_DEFINITION,
+  [EffectType.TransientShaper]: TRANSIENT_DEFINITION,
 }

@@ -16,8 +16,10 @@ import {
   GAIN_PARAM,
   GATE_PARAM,
   LIMITER_PARAM,
+  PHASER_PARAM,
   REVERB_PARAM,
   SATURATION_PARAM,
+  TRANSIENT_PARAM,
 } from '@/types/effects'
 
 export interface BilingualText {
@@ -762,6 +764,120 @@ const PITCH_SHIFT_DOCS: EffectDocs = {
   },
 }
 
+// ─── Phaser ──────────────────────────────────────────────────────────────
+
+const PHASER_DOCS: EffectDocs = {
+  title: { ro: 'Phaser', en: 'Phaser' },
+  summary: {
+    ro: {
+      beginner:
+        'Creează un efect de "swoosh" sau "jet" prin baleierea unor notch-uri de fază prin spectru. Clasic pe chitare, sintetizatoare și voci.',
+      advanced:
+        'Cascade de N filtre all-pass de ordinul 1, cu LFO care modulează frecvența de tăiere. Mixat cu semnalul uscat produce notch-uri (anulare de fază) care se deplasează. Feedback-ul adâncește notch-urile. Numărul de staje (2/4/6/8) determină câte notch-uri apar simultan.',
+    },
+    en: {
+      beginner:
+        'Creates a "swoosh" or "jet" sound by sweeping phase-shift notches through the spectrum. Classic on guitars, synths, and vocals.',
+      advanced:
+        'Cascade of N first-order all-pass filters, with an LFO modulating the cutoff frequency. Mixed with dry signal produces moving phase cancellation notches. Feedback deepens the notches. Stage count (2/4/6/8) determines how many notches appear simultaneously.',
+    },
+  },
+  params: {
+    [PHASER_PARAM.RATE]: {
+      title: { ro: 'Rate', en: 'Rate' },
+      body: {
+        ro: { beginner: 'Viteza de baleiaj — cât de repede se mișcă "swoosh"-ul.', advanced: 'Frecvența LFO în Hz. La valori mici (<0.5 Hz) efectul e lent și larg; la valori mari (>2 Hz) devine tremolo-like. Forma LFO este sinusoidală.' },
+        en: { beginner: 'Sweep speed — how fast the "swoosh" moves.', advanced: 'LFO frequency in Hz. Low values (<0.5 Hz) produce a slow, wide sweep; high values (>2 Hz) feel tremolo-like. LFO waveform is sinusoidal.' },
+      },
+    },
+    [PHASER_PARAM.DEPTH]: {
+      title: { ro: 'Depth', en: 'Depth' },
+      body: {
+        ro: { beginner: 'Cât de mult se deplasează notch-urile — adâncimea efectului.', advanced: 'Factor de modulație aplicat frecvenței center (fc ± depth·0.9·center). La 100 % notch-urile baleiază aproape o octavă în jurul centerului.' },
+        en: { beginner: 'How far the notches sweep — the intensity of the effect.', advanced: 'Modulation factor applied to the center frequency (fc ± depth·0.9·center). At 100 % the notches sweep nearly an octave around the center.' },
+      },
+    },
+    [PHASER_PARAM.CENTER_HZ]: {
+      title: { ro: 'Center', en: 'Center' },
+      body: {
+        ro: { beginner: 'Frecvența centrală a baleajului — unde se află notch-urile în spectru.', advanced: 'Frecvența medie de tăiere a filtrelor all-pass. Notch-urile se mișcă simetric (în scală logaritmică) în jurul acestui punct. Coeficientul all-pass: a = (tan(π·fc/sr)−1)/(tan(π·fc/sr)+1).' },
+        en: { beginner: 'Center frequency of the sweep — where the notches sit in the spectrum.', advanced: 'Mean cutoff of the all-pass filters. Notches sweep symmetrically (on a log scale) around this point. All-pass coefficient: a = (tan(π·fc/sr)−1)/(tan(π·fc/sr)+1).' },
+      },
+    },
+    [PHASER_PARAM.FEEDBACK]: {
+      title: { ro: 'Feedback', en: 'Feedback' },
+      body: {
+        ro: { beginner: 'Cât de pronunțat este efectul — feedback-ul adâncește notch-urile.', advanced: 'Fracție din semnalul ultimei staje reinjectată la intrare. Valori pozitive adâncesc notch-urile; valori negative inversează faza feedback-ului (efecte mai "metalice"). Limitat la ±0.95 pentru stabilitate.' },
+        en: { beginner: 'How pronounced the effect is — feedback deepens the notches.', advanced: 'Fraction of the last-stage signal fed back to the input. Positive values deepen notches; negative values invert feedback phase (more "metallic" sound). Clamped to ±0.95 for stability.' },
+      },
+    },
+    [PHASER_PARAM.STAGES]: {
+      title: { ro: 'Stages', en: 'Stages' },
+      body: {
+        ro: { beginner: 'Numărul de staje — mai multe staje = mai multe notch-uri și efect mai complex.', advanced: 'Numărul de filtre all-pass în cascadă. Fiecare pereche de staje produce un notch în răspunsul de frecvență. 2 staje = 1 notch; 4 = 2; 6 = 3; 8 = 4. Clasicul MXR Phase 90 folosea 4 staje.' },
+        en: { beginner: 'Stage count — more stages = more notches and richer sound.', advanced: 'Number of cascaded all-pass filters. Each pair of stages creates one notch in the frequency response. 2 stages = 1 notch; 4 = 2; 6 = 3; 8 = 4. The classic MXR Phase 90 used 4 stages.' },
+      },
+    },
+    [PHASER_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: '100 % = numai semnalul fazat; 0 % = original. 50 % este setarea tipică.', advanced: 'Blend dry/wet. Notch-urile sunt vizibile numai când semnalul uscat este prezent (interferență). La 100 % wet nu mai există notch-uri, ci numai o schimbare de fază (inaudibilă în mono).' },
+        en: { beginner: '100 % = phased signal only; 0 % = original. 50 % is the typical setting.', advanced: 'Dry/wet blend. Notches only appear when the dry signal is present (interference). At 100 % wet there are no notches, only a phase shift (inaudible in mono).' },
+      },
+    },
+  },
+}
+
+// ─── Transient Shaper ─────────────────────────────────────────────────────
+
+const TRANSIENT_DOCS: EffectDocs = {
+  title: { ro: 'Transient Shaper', en: 'Transient Shaper' },
+  summary: {
+    ro: {
+      beginner:
+        'Controlează independent forța atacului ("punch") și durata sunetului susținut. Excelent pe tobe, percuție și orice sunet cu transiente clare.',
+      advanced:
+        'Detectează semnalul de atac prin diferența a două envelope-followere (fast: 1 ms/30 ms; slow: 10 ms/150 ms). Fracția transient = (E1−E2)/E1. Gain-ul aplicat este un amestec ponderat al parametrilor Attack și Sustain dB.',
+    },
+    en: {
+      beginner:
+        'Independently controls attack punch and sustain body. Excellent on drums, percussion, and any signal with clear transients.',
+      advanced:
+        'Detects the attack portion via the difference of two envelope followers (fast: 1 ms/30 ms; slow: 10 ms/150 ms). Transient fraction = (E1−E2)/E1. Applied gain is a weighted blend of the Attack and Sustain dB parameters.',
+    },
+  },
+  params: {
+    [TRANSIENT_PARAM.ATTACK_GAIN_DB]: {
+      title: { ro: 'Attack', en: 'Attack' },
+      body: {
+        ro: { beginner: 'Cât de tare sau înăbușit este primul impact al sunetului. Valori pozitive = mai mult "punch"; negative = atac mai moale.', advanced: 'Gain în dB aplicat pe porțiunea de atac (E1−E2 > 0). +6 dB dublează amplitudinea transientului; −6 dB o înjumătățește. Gain-ul este smooth-uit la 1 ms pentru a evita click-urile.' },
+        en: { beginner: 'How hard or soft the initial hit sounds. Positive values = more punch; negative = softer attack.', advanced: 'Gain in dB applied to the attack portion (E1−E2 > 0). +6 dB doubles transient amplitude; −6 dB halves it. Gain is smoothed at 1 ms to prevent clicks.' },
+      },
+    },
+    [TRANSIENT_PARAM.SUSTAIN_GAIN_DB]: {
+      title: { ro: 'Sustain', en: 'Sustain' },
+      body: {
+        ro: { beginner: 'Cât de lung sau scurt sună sunetul după primul impact. Valori negative = mai percutant, mai scurt; pozitive = mai prelungit.', advanced: 'Gain în dB aplicat pe porțiunea de sustain (proporțional cu E2/E1). Valorile negative comprimă efectiv durata perceptivă prin scăderea nivelului de sustain.' },
+        en: { beginner: 'How long or short the sound rings after the initial hit. Negative values = more percussive; positive = longer sustain.', advanced: 'Gain in dB applied to the sustain portion (proportional to E2/E1). Negative values effectively compress perceived duration by lowering the sustain level.' },
+      },
+    },
+    [TRANSIENT_PARAM.SENSITIVITY]: {
+      title: { ro: 'Sense', en: 'Sense' },
+      body: {
+        ro: { beginner: 'Viteza de reacție — valori mari = detectare mai rapidă a transientelor.', advanced: 'Scalează constantele de timp ale envelope-followerelor (10× la 0 → 0.1× la 1). Setări mici = constantele de timp sunt mari → detectare mai lentă, potrivită pentru transiente lente (chitară, voce). Setări mari = detectare rapidă, potrivită pentru tobe.' },
+        en: { beginner: 'Detection speed — higher values = faster transient detection.', advanced: 'Scales the time constants of both envelope followers (10× at 0 → 0.1× at 1). Low settings = large time constants → slower detection, suited for slow transients (guitar, vocals). High settings = fast detection, suited for drums.' },
+      },
+    },
+    [TRANSIENT_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: '100 % = numai sunetul modificat; 0 % = original. Poți reduce mixul pentru un efect mai subtil.', advanced: 'Blend dry/wet standard. La valori intermediare efectul shape-ului este atenuat proporțional, fără a afecta calculul envelope-follower.' },
+        en: { beginner: '100 % = shaped sound only; 0 % = original. Reduce mix for a more subtle effect.', advanced: 'Standard dry/wet blend. At intermediate values the shaping effect is proportionally attenuated, without affecting the envelope follower calculation.' },
+      },
+    },
+  },
+}
+
 export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Gain]: GAIN_DOCS,
   [EffectType.Compressor]: COMPRESSOR_DOCS,
@@ -774,6 +890,8 @@ export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Chorus]: CHORUS_DOCS,
   [EffectType.Flanger]: FLANGER_DOCS,
   [EffectType.PitchShift]: PITCH_SHIFT_DOCS,
+  [EffectType.Phaser]: PHASER_DOCS,
+  [EffectType.TransientShaper]: TRANSIENT_DOCS,
 }
 
 import type { EducationLanguage, EducationMode } from '@/store/educationStore'

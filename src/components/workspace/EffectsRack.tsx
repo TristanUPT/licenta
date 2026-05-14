@@ -16,21 +16,25 @@ import { Saturation } from '@/components/effects/Saturation'
 import { Chorus } from '@/components/effects/Chorus'
 import { Flanger } from '@/components/effects/Flanger'
 import { PitchShift } from '@/components/effects/PitchShift'
+import { Phaser } from '@/components/effects/Phaser'
+import { TransientShaper } from '@/components/effects/TransientShaper'
 
 function renderEffect(instance: EffectInstance) {
   switch (instance.type) {
-    case EffectType.Gain:         return <Gain instance={instance} />
-    case EffectType.Compressor:   return <Compressor instance={instance} />
-    case EffectType.ParametricEq: return <ParametricEQ instance={instance} />
-    case EffectType.Gate:         return <Gate instance={instance} />
-    case EffectType.Limiter:      return <Limiter instance={instance} />
-    case EffectType.Delay:        return <Delay instance={instance} />
-    case EffectType.Reverb:       return <Reverb instance={instance} />
-    case EffectType.Saturation:   return <Saturation instance={instance} />
-    case EffectType.Chorus:       return <Chorus instance={instance} />
-    case EffectType.Flanger:      return <Flanger instance={instance} />
-    case EffectType.PitchShift:   return <PitchShift instance={instance} />
-    default:                      return null
+    case EffectType.Gain:            return <Gain instance={instance} />
+    case EffectType.Compressor:      return <Compressor instance={instance} />
+    case EffectType.ParametricEq:    return <ParametricEQ instance={instance} />
+    case EffectType.Gate:            return <Gate instance={instance} />
+    case EffectType.Limiter:         return <Limiter instance={instance} />
+    case EffectType.Delay:           return <Delay instance={instance} />
+    case EffectType.Reverb:          return <Reverb instance={instance} />
+    case EffectType.Saturation:      return <Saturation instance={instance} />
+    case EffectType.Chorus:          return <Chorus instance={instance} />
+    case EffectType.Flanger:         return <Flanger instance={instance} />
+    case EffectType.PitchShift:      return <PitchShift instance={instance} />
+    case EffectType.Phaser:          return <Phaser instance={instance} />
+    case EffectType.TransientShaper: return <TransientShaper instance={instance} />
+    default:                         return null
   }
 }
 

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAudioStore } from '@/store/audioStore'
 import { useEffectsStore } from '@/store/effectsStore'
 import * as transport from '@/audio/transport'
+import { usePresetStore } from '@/store/presetStore'
 
 /**
  * Global keyboard shortcuts.
@@ -84,6 +85,37 @@ export function useKeyboardShortcuts() {
         case 'KeyB': {
           const { setGlobalBypass, globalBypass } = useEffectsStore.getState()
           setGlobalBypass(!globalBypass)
+          break
+        }
+
+        case 'KeyZ': {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            const store = useEffectsStore.getState()
+            if (e.shiftKey) {
+              if (store.canRedo()) {
+                store.redo()
+                usePresetStore.getState().setActivePresetId(null)
+              }
+            } else {
+              if (store.canUndo()) {
+                store.undo()
+                usePresetStore.getState().setActivePresetId(null)
+              }
+            }
+          }
+          break
+        }
+
+        case 'KeyY': {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            const store = useEffectsStore.getState()
+            if (store.canRedo()) {
+              store.redo()
+              usePresetStore.getState().setActivePresetId(null)
+            }
+          }
           break
         }
       }

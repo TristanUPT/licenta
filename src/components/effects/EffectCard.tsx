@@ -1,12 +1,29 @@
 import { type ReactNode } from 'react'
 import { useEffectsStore } from '@/store/effectsStore'
 import { useEducationStore } from '@/store/educationStore'
-import { EFFECT_DEFINITIONS, type EffectInstance } from '@/types/effects'
+import { EFFECT_DEFINITIONS, EffectType, type EffectInstance } from '@/types/effects'
 import { EFFECT_DOCS, pickText, pickTitle } from '@/education/effectDescriptions'
 
 interface EffectCardProps {
   instance: EffectInstance
   children: ReactNode
+}
+
+// Each category gets a distinct accent colour shown as a left border.
+const EFFECT_COLOR: Record<EffectType, string> = {
+  [EffectType.Gain]:            'border-l-purple-500',
+  [EffectType.Compressor]:      'border-l-amber-500',
+  [EffectType.ParametricEq]:    'border-l-emerald-500',
+  [EffectType.Gate]:            'border-l-amber-500',
+  [EffectType.Limiter]:         'border-l-amber-500',
+  [EffectType.Delay]:           'border-l-sky-500',
+  [EffectType.Reverb]:          'border-l-sky-500',
+  [EffectType.Saturation]:      'border-l-rose-500',
+  [EffectType.Chorus]:          'border-l-violet-500',
+  [EffectType.Flanger]:         'border-l-violet-500',
+  [EffectType.PitchShift]:      'border-l-purple-500',
+  [EffectType.Phaser]:          'border-l-violet-500',
+  [EffectType.TransientShaper]: 'border-l-amber-500',
 }
 
 export function EffectCard({ instance, children }: EffectCardProps) {
@@ -20,9 +37,11 @@ export function EffectCard({ instance, children }: EffectCardProps) {
   const title   = docs ? pickTitle(docs.title, language) : definition.label
   const summary = docs ? pickText(docs.summary, language, mode) : definition.description
 
+  const accentColor = EFFECT_COLOR[instance.type]
+
   return (
     <div
-      className={`rounded-xl border bg-zinc-900 p-4 transition ${
+      className={`rounded-xl border border-l-2 bg-zinc-900 p-4 transition ${accentColor} ${
         instance.bypassed
           ? 'border-zinc-800 opacity-50'
           : 'border-zinc-700 shadow-md shadow-purple-500/5'
