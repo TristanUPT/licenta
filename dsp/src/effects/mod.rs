@@ -5,6 +5,7 @@
 
 pub mod chorus;
 pub mod compressor;
+pub mod de_esser;
 pub mod delay;
 pub mod eq;
 pub mod flanger;
@@ -33,6 +34,7 @@ pub enum EffectType {
     PitchShift = 10,
     Phaser = 11,
     TransientShaper = 12,
+    DeEsser = 13,
 }
 
 impl EffectType {
@@ -51,6 +53,7 @@ impl EffectType {
             10 => Some(EffectType::PitchShift),
             11 => Some(EffectType::Phaser),
             12 => Some(EffectType::TransientShaper),
+            13 => Some(EffectType::DeEsser),
             _  => None,
         }
     }
@@ -78,5 +81,6 @@ pub fn build(effect_type: EffectType, sample_rate: f32) -> Box<dyn Effect> {
         EffectType::PitchShift      => Box::new(pitch_shift::PitchShift::new(sample_rate)),
         EffectType::Phaser          => Box::new(phaser::Phaser::new(sample_rate)),
         EffectType::TransientShaper => Box::new(transient_shaper::TransientShaper::new(sample_rate)),
+        EffectType::DeEsser         => Box::new(de_esser::DeEsser::new(sample_rate)),
     }
 }

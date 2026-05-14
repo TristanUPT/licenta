@@ -24,6 +24,7 @@ const EFFECT_COLOR: Record<EffectType, string> = {
   [EffectType.PitchShift]:      'border-l-purple-500',
   [EffectType.Phaser]:          'border-l-violet-500',
   [EffectType.TransientShaper]: 'border-l-amber-500',
+  [EffectType.DeEsser]:         'border-l-amber-500',
 }
 
 export function EffectCard({ instance, children }: EffectCardProps) {

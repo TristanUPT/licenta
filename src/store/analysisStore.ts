@@ -8,6 +8,8 @@ interface AnalysisState {
   /** Decaying peak hold (linear). */
   peakHold: number
   peakHoldExpiresAt: number
+  /** Latching clip indicator — set true when peak >= 1.0, reset manually. */
+  clipped: boolean
 
   /** Per-effect meter values (id → { meter_id → value }). */
   perEffect: Record<number, Record<number, number>>
@@ -16,6 +18,7 @@ interface AnalysisState {
   setEffectMeter: (id: number, meterId: number, value: number) => void
   clearEffect: (id: number) => void
   resetMaster: () => void
+  clearClip: () => void
 }
 
 const PEAK_HOLD_MS = 1500
@@ -25,6 +28,7 @@ export const useAnalysisStore = create<AnalysisState>()((set, get) => ({
   masterPeak: 0,
   peakHold: 0,
   peakHoldExpiresAt: 0,
+  clipped: false,
   perEffect: {},
 
   setMaster: (rms, peak) => {
@@ -35,7 +39,8 @@ export const useAnalysisStore = create<AnalysisState>()((set, get) => ({
       peakHold = peak
       peakHoldExpiresAt = now + PEAK_HOLD_MS
     }
-    set({ masterRms: rms, masterPeak: peak, peakHold, peakHoldExpiresAt })
+    const clipped = cur.clipped || peak >= 1.0
+    set({ masterRms: rms, masterPeak: peak, peakHold, peakHoldExpiresAt, clipped })
   },
 
   setEffectMeter: (id, meterId, value) => set((s) => ({
@@ -52,5 +57,6 @@ export const useAnalysisStore = create<AnalysisState>()((set, get) => ({
     return { perEffect: next }
   }),
 
-  resetMaster: () => set({ masterRms: 0, masterPeak: 0, peakHold: 0, peakHoldExpiresAt: 0 }),
+  resetMaster: () => set({ masterRms: 0, masterPeak: 0, peakHold: 0, peakHoldExpiresAt: 0, clipped: false }),
+  clearClip: () => set({ clipped: false }),
 }))

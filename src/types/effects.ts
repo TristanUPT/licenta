@@ -15,6 +15,7 @@ export const EffectType = {
   PitchShift: 10,
   Phaser: 11,
   TransientShaper: 12,
+  DeEsser: 13,
 } as const
 
 export type EffectType = (typeof EffectType)[keyof typeof EffectType]
@@ -519,6 +520,31 @@ export const TRANSIENT_DEFINITION: EffectDefinition = {
   ],
 }
 
+// ─── De-esser ────────────────────────────────────────────────────────────
+
+export const DE_ESSER_PARAM = {
+  THRESHOLD_DB: 0,
+  FREQ_HZ:      1,
+  RATIO:        2,
+  RELEASE_MS:   3,
+  LISTEN:       4,
+  DRY_WET:      5,
+} as const
+
+export const DE_ESSER_DEFINITION: EffectDefinition = {
+  type: EffectType.DeEsser,
+  label: 'De-esser',
+  description: 'Frequency-selective compressor that tames sibilant "S" and "T" sounds.',
+  params: [
+    { id: DE_ESSER_PARAM.THRESHOLD_DB, label: 'Threshold', description: 'Sibilance level above which reduction starts.', min: -60, max: 0,     default: -30,  unit: 'dB',  format: (v) => v.toFixed(1) },
+    { id: DE_ESSER_PARAM.FREQ_HZ,      label: 'Freq',      description: 'Sidechain HPF — focus on sounds above this.',  min: 2000, max: 16000, default: 7000, unit: 'Hz',  scale: 'log', format: (v) => v < 1000 ? `${v.toFixed(0)}` : `${(v / 1000).toFixed(1)}k` },
+    { id: DE_ESSER_PARAM.RATIO,        label: 'Ratio',     description: 'How hard sibilance is attenuated.',            min: 2,    max: 20,    default: 6,                  format: (v) => `${v.toFixed(1)}:1` },
+    { id: DE_ESSER_PARAM.RELEASE_MS,   label: 'Release',   description: 'Recovery time after sibilance.',              min: 5,    max: 200,   default: 40,   unit: 'ms',  scale: 'log', format: (v) => v.toFixed(0) },
+    { id: DE_ESSER_PARAM.LISTEN,       label: 'Listen',    description: 'Route sidechain to output — for tuning.',     min: 0,    max: 1,     default: 0,    scale: 'boolean', format: (v) => v >= 0.5 ? 'on' : 'off' },
+    { id: DE_ESSER_PARAM.DRY_WET,      label: 'Mix',       description: 'Wet/dry blend.',                             min: 0,    max: 1,     default: 1,                  format: (v) => `${Math.round(v * 100)}%` },
+  ],
+}
+
 export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.Gain]: GAIN_DEFINITION,
   [EffectType.Compressor]: COMPRESSOR_DEFINITION,
@@ -533,4 +559,5 @@ export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.PitchShift]: PITCH_SHIFT_DEFINITION,
   [EffectType.Phaser]: PHASER_DEFINITION,
   [EffectType.TransientShaper]: TRANSIENT_DEFINITION,
+  [EffectType.DeEsser]: DE_ESSER_DEFINITION,
 }

@@ -5,6 +5,7 @@ import { usePresetStore } from '@/store/presetStore'
 import { useEducationStore } from '@/store/educationStore'
 import { FACTORY_PRESETS, type Preset } from '@/presets/factoryPresets'
 import { getStatus } from '@/audio/engine'
+import type { EducationLanguage, EducationMode } from '@/store/educationStore'
 
 export function PresetManager() {
   const effects            = useEffectsStore((s) => s.effects)
@@ -24,6 +25,8 @@ export function PresetManager() {
   const [saving, setSaving]     = useState(false)
   const [saveName, setSaveName] = useState('')
   const nameInputRef            = useRef<HTMLInputElement>(null)
+
+  const mode = useEducationStore((s) => s.mode)
 
   const activePreset = [...FACTORY_PRESETS, ...userPresets].find(
     (p) => p.id === activePresetId,
@@ -139,6 +142,7 @@ export function PresetManager() {
                   key={preset.id}
                   preset={preset}
                   language={language}
+                  mode={mode}
                   isActive={preset.id === activePresetId}
                   onLoad={() => handleLoad(preset)}
                 />
@@ -160,6 +164,7 @@ export function PresetManager() {
                     key={preset.id}
                     preset={preset}
                     language={language}
+                    mode={mode}
                     isActive={preset.id === activePresetId}
                     onLoad={() => handleLoad(preset)}
                     onDelete={(e) => handleDelete(preset.id, e)}
@@ -216,51 +221,81 @@ export function PresetManager() {
 
 interface PresetRowProps {
   preset: Preset
-  language: 'ro' | 'en'
+  language: EducationLanguage
+  mode: EducationMode
   isActive: boolean
   onLoad: () => void
   onDelete?: (e: React.MouseEvent) => void
 }
 
-function PresetRow({ preset, language, isActive, onLoad, onDelete }: PresetRowProps) {
+function PresetRow({ preset, language, mode, isActive, onLoad, onDelete }: PresetRowProps) {
+  const [showRationale, setShowRationale] = useState(false)
+  const hasRationale = !!preset.rationale
+
+  const whyLabel = language === 'ro' ? 'De ce funcționează?' : 'Why does it work?'
+
   return (
     <li>
-      <button
-        onClick={onLoad}
-        className={`group w-full rounded-md px-3 py-2 text-left transition ${
-          isActive ? 'bg-purple-600/20 ring-1 ring-purple-500/30' : 'hover:bg-zinc-800'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-zinc-100">
-            {preset.name[language]}
-          </span>
-          <div className="flex shrink-0 items-center gap-1">
-            {isActive && (
-              <svg className="h-3.5 w-3.5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            )}
-            {onDelete && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={onDelete}
-                onKeyDown={(e) => e.key === 'Enter' && onDelete(e as unknown as React.MouseEvent)}
-                className="flex h-4 w-4 items-center justify-center rounded text-zinc-600 opacity-0 transition hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
-                aria-label="Delete preset"
+      <div className={`group rounded-md transition ${isActive ? 'bg-purple-600/20 ring-1 ring-purple-500/30' : 'hover:bg-zinc-800'}`}>
+        <button
+          onClick={onLoad}
+          className="w-full px-3 py-2 text-left"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium text-zinc-100">
+              {preset.name[language]}
+            </span>
+            <div className="flex shrink-0 items-center gap-1">
+              {isActive && (
+                <svg className="h-3.5 w-3.5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+              {onDelete && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={onDelete}
+                  onKeyDown={(e) => e.key === 'Enter' && onDelete(e as unknown as React.MouseEvent)}
+                  className="flex h-4 w-4 items-center justify-center rounded text-zinc-600 opacity-0 transition hover:bg-red-500/20 hover:text-red-400 group-hover:opacity-100"
+                  aria-label="Delete preset"
+                >
+                  ×
+                </span>
+              )}
+            </div>
+          </div>
+          {preset.description[language] && (
+            <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+              {preset.description[language]}
+            </p>
+          )}
+        </button>
+
+        {/* "Why does it work?" toggle — factory presets only */}
+        {hasRationale && (
+          <div className="px-3 pb-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowRationale((v) => !v) }}
+              className="flex items-center gap-1 text-[10px] text-purple-400 transition hover:text-purple-300"
+            >
+              <svg
+                className={`h-2.5 w-2.5 transition-transform ${showRationale ? 'rotate-90' : ''}`}
+                fill="currentColor"
+                viewBox="0 0 8 8"
               >
-                ×
-              </span>
+                <polygon points="0,0 8,4 0,8" />
+              </svg>
+              {whyLabel}
+            </button>
+            {showRationale && preset.rationale && (
+              <p className="mt-1.5 rounded-lg bg-purple-500/10 px-2.5 py-2 text-[11px] leading-relaxed text-purple-200">
+                {preset.rationale[language][mode]}
+              </p>
             )}
           </div>
-        </div>
-        {preset.description[language] && (
-          <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
-            {preset.description[language]}
-          </p>
         )}
-      </button>
+      </div>
     </li>
   )
 }

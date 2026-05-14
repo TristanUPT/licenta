@@ -8,6 +8,7 @@
 
 import {
   COMPRESSOR_PARAM,
+  DE_ESSER_PARAM,
   DELAY_PARAM,
   EQ_BAND_PARAM,
   EQ_LOW_CUT_PARAM,
@@ -878,6 +879,70 @@ const TRANSIENT_DOCS: EffectDocs = {
   },
 }
 
+// ─── De-esser ────────────────────────────────────────────────────────────
+
+const DE_ESSER_DOCS: EffectDocs = {
+  title: { ro: 'De-esser', en: 'De-esser' },
+  summary: {
+    ro: {
+      beginner:
+        'Reduce automat sunetele ascuțite ("S", "Ș", "T") din voce sau orice instrument. Esențial pentru voci înregistrate cu microfon.',
+      advanced:
+        'Compressor cu sidechain HPF selectiv în frecvență. Semnalul filtrat (deasupra freq_hz) activează un envelope follower; când nivelul depășește threshold-ul, se aplică o reducere de gain (cu soft-knee de 6 dB) întregului semnal (wideband). LISTEN mode rutează sidechain-ul la ieșire pentru a identifica frecvența optimă.',
+    },
+    en: {
+      beginner:
+        'Automatically reduces harsh "S", "Sh", and "T" sounds in vocals or instruments. Essential for mic-recorded vocals.',
+      advanced:
+        'Frequency-selective compressor with a sidechain HPF. The filtered signal (above freq_hz) drives an envelope follower; when the level exceeds the threshold, wideband gain reduction is applied with a 6 dB soft knee. LISTEN mode routes the sidechain to the output for frequency tuning.',
+    },
+  },
+  params: {
+    [DE_ESSER_PARAM.THRESHOLD_DB]: {
+      title: { ro: 'Threshold', en: 'Threshold' },
+      body: {
+        ro: { beginner: 'Nivelul sibilanței de la care de-esserul intră în acțiune. Coboară dacă nu acționează suficient; ridică dacă reduce prea mult.', advanced: 'Nivel de threshold pe semnalul sidechain (post-HPF). Reducerea de gain începe la T−W/2 și este completă la T+W/2 (W = 6 dB knee). Sub threshold, nu se aplică nicio reducere.' },
+        en: { beginner: 'Sibilance level at which de-essing starts. Lower it if not working enough; raise it to de-ess less.', advanced: 'Threshold level on the sidechain signal (post-HPF). Gain reduction starts at T−W/2 and is fully engaged at T+W/2 (W = 6 dB knee). Below threshold, no reduction is applied.' },
+      },
+    },
+    [DE_ESSER_PARAM.FREQ_HZ]: {
+      title: { ro: 'Freq', en: 'Freq' },
+      body: {
+        ro: { beginner: 'Frecvența de unde de-esserul "ascultă" sibilanța. Folosește LISTEN pentru a auzi ce detectează.', advanced: 'Frecvența de tăiere a HPF-ului din sidechain (Q=0.707, Butterworth). Frecvențele de mai jos sunt ignorate la detecție. Sibilanța vocală feminină: 6–9 kHz; masculină: 4–7 kHz.' },
+        en: { beginner: 'Frequency where the de-esser "listens" for sibilance. Use LISTEN to hear what it detects.', advanced: 'Cutoff frequency of the sidechain HPF (Q=0.707, Butterworth). Frequencies below this are ignored in detection. Female vocal sibilance: 6–9 kHz; male: 4–7 kHz.' },
+      },
+    },
+    [DE_ESSER_PARAM.RATIO]: {
+      title: { ro: 'Ratio', en: 'Ratio' },
+      body: {
+        ro: { beginner: 'Cât de agresiv reduce sibilanța. 4:1 este subtil; 10:1+ este agresiv.', advanced: 'Rata de compresie aplicată pe semnalul integral când sidechain-ul depășește threshold-ul. Formula: GR_db = (T + (x−T)/R) − x. Un ratio de ∞:1 (limiter) elimină complet orice vârf de sibilanță.' },
+        en: { beginner: 'How aggressively sibilance is reduced. 4:1 is subtle; 10:1+ is aggressive.', advanced: 'Compression ratio applied to the full signal when the sidechain exceeds threshold. Formula: GR_db = (T + (x−T)/R) − x. An ∞:1 ratio (limiter) completely eliminates any sibilance peak.' },
+      },
+    },
+    [DE_ESSER_PARAM.RELEASE_MS]: {
+      title: { ro: 'Release', en: 'Release' },
+      body: {
+        ro: { beginner: 'Cât de repede revine sunetul la normal după o sibilanță. Valori mici pot crea un sunet clic; valori mari lasă sibilanța să se scurgă.', advanced: 'Constanta de timp de release a envelope follower-ului din sidechain. Attack fix la 1 ms (detectare rapidă). Release prea scurt (<10 ms) → distorsion prin modulare AM a semnalului; prea lung (>100 ms) → pierdere de claritate.' },
+        en: { beginner: 'How quickly the sound returns to normal after sibilance. Too short can sound clicky; too long leaves sibilance bleeding through.', advanced: 'Release time constant of the sidechain envelope follower. Attack is fixed at 1 ms (fast detection). Too short a release (<10 ms) → AM distortion; too long (>100 ms) → intelligibility loss.' },
+      },
+    },
+    [DE_ESSER_PARAM.LISTEN]: {
+      title: { ro: 'Listen', en: 'Listen' },
+      body: {
+        ro: { beginner: 'Activează pentru a auzi ce detectează de-esserul. Ajustează Freq până auzi clar sibilanța, apoi dezactivează.', advanced: 'Rutează semnalul sidechain post-HPF la ieșire. Permite identificarea corectă a frecvenței de tăiere prin auditare directă a conținutului detectat. Dezactivează înainte de export.' },
+        en: { beginner: 'Enable to hear what the de-esser is detecting. Tune Freq until sibilance is clearly audible, then disable.', advanced: 'Routes the post-HPF sidechain signal to the output. Allows accurate frequency identification by direct audition of the detected content. Disable before export.' },
+      },
+    },
+    [DE_ESSER_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: '100 % = de-essing complet; 50 % = efect redus la jumătate.', advanced: 'Blend dry/wet standard. Parallel de-essing (valori <100 %) poate păstra mai multă naturalețe decât reducerea completă.' },
+        en: { beginner: '100 % = full de-essing; 50 % = halved effect.', advanced: 'Standard dry/wet blend. Parallel de-essing (values <100 %) can preserve more naturalness than full processing.' },
+      },
+    },
+  },
+}
+
 export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Gain]: GAIN_DOCS,
   [EffectType.Compressor]: COMPRESSOR_DOCS,
@@ -892,6 +957,7 @@ export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.PitchShift]: PITCH_SHIFT_DOCS,
   [EffectType.Phaser]: PHASER_DOCS,
   [EffectType.TransientShaper]: TRANSIENT_DOCS,
+  [EffectType.DeEsser]: DE_ESSER_DOCS,
 }
 
 import type { EducationLanguage, EducationMode } from '@/store/educationStore'

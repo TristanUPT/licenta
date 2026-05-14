@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAudioStore } from '@/store/audioStore'
+import { useAnalysisStore } from '@/store/analysisStore'
 import { useEffectsStore } from '@/store/effectsStore'
 import * as transport from '@/audio/transport'
 import { renderAndDownload } from '@/audio/export'
@@ -72,11 +73,27 @@ export function TransportBar() {
     }
   }
 
+  const clipped   = useAnalysisStore((s) => s.clipped)
+  const clearClip = useAnalysisStore((s) => s.clearClip)
+
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 sm:px-4 sm:py-3">
       {/* Row 1: meter + transport controls + time */}
       <div className="flex items-center gap-2 sm:gap-4">
-        <LevelMeter height={40} width={16} />
+        <div className="flex flex-col items-center gap-1">
+          <LevelMeter height={40} width={16} />
+          <button
+            onClick={clearClip}
+            title="Click to reset clip indicator"
+            className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase transition ${
+              clipped
+                ? 'bg-red-500 text-white hover:bg-red-400'
+                : 'bg-zinc-800 text-zinc-600'
+            }`}
+          >
+            CLIP
+          </button>
+        </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <button
