@@ -5,6 +5,8 @@ import { useAudioStore } from '@/store/audioStore'
 import { useEducationStore } from '@/store/educationStore'
 import { usePresetStore } from '@/store/presetStore'
 import { useUiStore } from '@/store/uiStore'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { KeyboardHint } from '@/components/workspace/KeyboardHint'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
@@ -42,6 +44,8 @@ function PanelToggle({ label, active, onClick }: PanelToggleProps) {
 function App() {
   const [status, setStatus] = useState<EngineStatus>(getStatus().status)
   useEffect(() => subscribe((s) => setStatus(s)), [])
+
+  useKeyboardShortcuts()
 
   const loadUserPresets = usePresetStore((s) => s.loadUserPresetsFromDB)
   useEffect(() => { void loadUserPresets() }, [loadUserPresets])
@@ -148,6 +152,8 @@ function App() {
           <FileDropZone />
         )}
       </main>
+
+      <KeyboardHint />
 
       <footer className="border-t border-zinc-800 px-3 py-2 sm:px-6 sm:py-3">
         <div className="mx-auto max-w-5xl">
