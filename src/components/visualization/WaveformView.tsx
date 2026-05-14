@@ -3,18 +3,19 @@ import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import type { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import { useAudioStore } from '@/store/audioStore'
+import { useEducationStore } from '@/store/educationStore'
 import * as transport from '@/audio/transport'
 
 const LOOP_REGION_ID = 'loop'
 
-/**
- * Display the loaded clip's waveform and let the user select a loop region.
- *
- * Wavesurfer is used for visualisation only — peaks are computed from the
- * decoded `AudioBuffer` and passed in directly. Playback never goes through
- * Wavesurfer's internal audio element; it always runs through the engine
- * (`transport.play`).
- */
+function fmt(sec: number): string {
+  if (!isFinite(sec) || sec < 0) sec = 0
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  const ms = Math.floor((sec - Math.floor(sec)) * 100)
+  return `${m}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
+}
+
 export function WaveformView() {
   const containerRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WaveSurfer | null>(null)
@@ -29,6 +30,22 @@ export function WaveformView() {
   const setPlaying = useAudioStore((s) => s.setPlaying)
   const loopStart = useAudioStore((s) => s.loopStart)
   const loopEnd = useAudioStore((s) => s.loopEnd)
+  const language = useEducationStore((s) => s.language)
+
+  const duration = audioBuffer?.duration ?? 0
+  const hasRegion = loopStart !== 0 || loopEnd !== duration
+
+  function handleSetIn() {
+    setLoopRegion(playbackPosition, Math.max(playbackPosition + 0.1, loopEnd))
+  }
+
+  function handleSetOut() {
+    setLoopRegion(Math.min(loopStart, playbackPosition - 0.1), playbackPosition)
+  }
+
+  function handleClearRegion() {
+    setLoopRegion(0, duration)
+  }
 
   // Build / rebuild wavesurfer when a new buffer is loaded.
   useEffect(() => {
@@ -42,9 +59,9 @@ export function WaveformView() {
     const regions = RegionsPlugin.create()
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: '#52525b',          // zinc-600
-      progressColor: '#a855f7',      // purple-500
-      cursorColor: '#e4e4e7',        // zinc-200
+      waveColor: '#52525b',
+      progressColor: '#a855f7',
+      cursorColor: '#e4e4e7',
       cursorWidth: 2,
       barWidth: 2,
       barGap: 1,
@@ -52,7 +69,6 @@ export function WaveformView() {
       height: 140,
       normalize: true,
       interact: true,
-      // Skip wavesurfer's own decoding: provide peaks + duration.
       peaks: peaks as unknown as number[][],
       duration: audioBuffer.duration,
       plugins: [regions],
@@ -60,7 +76,6 @@ export function WaveformView() {
     wsRef.current = ws
     regionsRef.current = regions
 
-    // Click anywhere on the waveform → seek + (re)start playback at that point.
     ws.on('click', (relativeX) => {
       const offset = relativeX * audioBuffer.duration
       transport.play(audioBuffer, {
@@ -72,11 +87,9 @@ export function WaveformView() {
       setPlaying(true)
     })
 
-    // Drag-to-create a region; we keep at most one ("loop").
     regions.enableDragSelection({ color: 'rgba(168, 85, 247, 0.18)' })
 
     regions.on('region-created', (region: Region) => {
-      // Remove any previous region — we want a single loop region.
       const all = regions.getRegions()
       for (const r of all) {
         if (r.id !== region.id) r.remove()
@@ -105,14 +118,12 @@ export function WaveformView() {
     ws.setTime(playbackPosition)
   }, [playbackPosition, audioBuffer])
 
-  // Reflect store-side loop region back into the visual region (e.g. preset
-  // load, programmatic toggle).
+  // Reflect store-side loop region back into the visual region.
   useEffect(() => {
     const regions = regionsRef.current
     if (!regions || !audioBuffer) return
     const existing = regions.getRegions().find((r) => r.id === LOOP_REGION_ID)
     if (loopStart === 0 && loopEnd === audioBuffer.duration) {
-      // No meaningful region selected; clear it.
       existing?.remove()
       loopRegionRef.current = null
       return
@@ -132,14 +143,12 @@ export function WaveformView() {
     }
   }, [loopStart, loopEnd, audioBuffer])
 
-  // Visual: dim the cursor when not playing.
   useEffect(() => {
     const ws = wsRef.current
     if (!ws) return
     ws.setOptions({ cursorColor: isPlaying ? '#e4e4e7' : '#71717a' })
   }, [isPlaying])
 
-  // Visual hint that a region IS the loop region (toggle outline).
   useEffect(() => {
     const region = loopRegionRef.current
     if (!region) return
@@ -150,12 +159,61 @@ export function WaveformView() {
 
   if (!audioBuffer) return null
 
+  const hint = language === 'ro'
+    ? 'Click pentru seek · drag pentru regiune de loop'
+    : 'Click to seek · drag to select loop region'
+  const setInLabel  = language === 'ro' ? 'Set In'  : 'Set In'
+  const setOutLabel = language === 'ro' ? 'Set Out' : 'Set Out'
+  const clearLabel  = language === 'ro' ? 'Șterge'  : 'Clear'
+
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
       <div ref={containerRef} className="w-full" />
-      <p className="mt-2 text-center text-xs text-zinc-500">
-        Click pe waveform pentru seek · drag pentru a selecta o regiune de loop
-      </p>
+
+      {/* Controls row */}
+      <div className="mt-2 flex items-center justify-between gap-4">
+        <p className="text-xs text-zinc-500">{hint}</p>
+
+        <div className="flex items-center gap-2">
+          {/* Loop region times */}
+          {hasRegion && (
+            <span className="font-mono text-[11px] text-zinc-400">
+              <span className={isLooping ? 'text-emerald-400' : 'text-purple-400'}>{fmt(loopStart)}</span>
+              <span className="mx-1 text-zinc-600">–</span>
+              <span className={isLooping ? 'text-emerald-400' : 'text-purple-400'}>{fmt(loopEnd)}</span>
+            </span>
+          )}
+
+          {/* Set In / Set Out */}
+          <button
+            onClick={handleSetIn}
+            disabled={!isPlaying}
+            title={language === 'ro' ? 'Setează punctul de start la poziția curentă' : 'Set loop start to current position'}
+            className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            {setInLabel}
+          </button>
+          <button
+            onClick={handleSetOut}
+            disabled={!isPlaying}
+            title={language === 'ro' ? 'Setează punctul de sfârșit la poziția curentă' : 'Set loop end to current position'}
+            className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            {setOutLabel}
+          </button>
+
+          {/* Clear region */}
+          {hasRegion && (
+            <button
+              onClick={handleClearRegion}
+              title={language === 'ro' ? 'Șterge regiunea de loop' : 'Clear loop region'}
+              className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition hover:bg-red-500/20 hover:text-red-400"
+            >
+              {clearLabel}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
