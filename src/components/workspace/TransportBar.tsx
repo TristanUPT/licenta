@@ -73,8 +73,16 @@ export function TransportBar() {
     }
   }
 
-  const clipped   = useAnalysisStore((s) => s.clipped)
-  const clearClip = useAnalysisStore((s) => s.clearClip)
+  const clipped    = useAnalysisStore((s) => s.clipped)
+  const clearClip  = useAnalysisStore((s) => s.clearClip)
+  const masterPeak = useAnalysisStore((s) => s.masterPeak)
+  const masterRms  = useAnalysisStore((s) => s.masterRms)
+
+  function toDbfs(lin: number) {
+    if (lin <= 0) return '-∞'
+    const db = 20 * Math.log10(lin)
+    return `${db.toFixed(1)} dB`
+  }
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 sm:px-4 sm:py-3">
@@ -93,6 +101,21 @@ export function TransportBar() {
           >
             CLIP
           </button>
+        </div>
+        {/* Numeric level readout */}
+        <div className="hidden flex-col items-start gap-0.5 sm:flex">
+          <div className="flex items-baseline gap-1">
+            <span className="w-8 text-right font-mono text-[10px] text-zinc-500">pk</span>
+            <span className={`font-mono text-[11px] tabular-nums ${masterPeak >= 1 ? 'text-red-400' : masterPeak > 0.5 ? 'text-amber-300' : 'text-zinc-300'}`}>
+              {toDbfs(masterPeak)}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="w-8 text-right font-mono text-[10px] text-zinc-500">rms</span>
+            <span className="font-mono text-[11px] tabular-nums text-zinc-400">
+              {toDbfs(masterRms)}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">

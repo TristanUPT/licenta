@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { SpectrumAnalyzer } from './SpectrumAnalyzer'
 import { Spectrogram } from './Spectrogram'
+import { SpectrumCompare } from './SpectrumCompare'
+import { Oscilloscope } from './Oscilloscope'
 import { useEducationStore } from '@/store/educationStore'
 
-type Tab = 'spectrum' | 'spectrogram'
+type Tab = 'spectrum' | 'spectrogram' | 'oscilloscope' | 'compare'
 
 const TAB_LABELS: Record<Tab, { ro: string; en: string }> = {
-  spectrum:     { ro: 'Spectru',      en: 'Spectrum'     },
-  spectrogram:  { ro: 'Spectrogram',  en: 'Spectrogram'  },
+  spectrum:     { ro: 'Spectru',       en: 'Spectrum'     },
+  spectrogram:  { ro: 'Spectrogram',   en: 'Spectrogram'  },
+  oscilloscope: { ro: 'Osciloscop',    en: 'Oscilloscope' },
+  compare:      { ro: 'Compară',       en: 'Compare'      },
 }
 
 const TAB_DESC: Record<Tab, { ro: string; en: string }> = {
@@ -19,6 +23,14 @@ const TAB_DESC: Record<Tab, { ro: string; en: string }> = {
     ro: 'Evoluția spectrului în timp — axa Y = frecvență (log), axa X = timp, culoare = amplitudine.',
     en: 'Spectrum over time — Y = frequency (log scale), X = time, colour = amplitude.',
   },
+  oscilloscope: {
+    ro: 'Forma de undă în domeniul timp — arată amplitudinea semnalului per eșantion, trigger pe trecerea prin zero.',
+    en: 'Time-domain waveform — shows signal amplitude per sample, zero-crossing trigger for stability.',
+  },
+  compare: {
+    ro: 'Îngheață spectrul curent (cyan) și compară-l cu semnalul live (violet) — util pentru A/B parametri.',
+    en: 'Freeze the current spectrum (cyan) and compare with the live signal (purple) — useful for A/B parameter changes.',
+  },
 }
 
 export function VisualizerPanel() {
@@ -29,7 +41,7 @@ export function VisualizerPanel() {
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
       {/* Tab bar */}
       <div className="mb-2 flex items-center gap-1 px-1">
-        {(['spectrum', 'spectrogram'] as Tab[]).map((t) => (
+        {(['spectrum', 'spectrogram', 'oscilloscope', 'compare'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -45,7 +57,10 @@ export function VisualizerPanel() {
       </div>
 
       {/* Active visualization */}
-      {tab === 'spectrum' ? <SpectrumAnalyzer /> : <Spectrogram />}
+      {tab === 'spectrum'     && <SpectrumAnalyzer />}
+      {tab === 'spectrogram'  && <Spectrogram />}
+      {tab === 'oscilloscope' && <Oscilloscope />}
+      {tab === 'compare'      && <SpectrumCompare />}
 
       {/* Description */}
       <p className="mt-1 px-1 text-[10px] text-zinc-600">

@@ -19,6 +19,7 @@ import { PitchShift } from '@/components/effects/PitchShift'
 import { Phaser } from '@/components/effects/Phaser'
 import { TransientShaper } from '@/components/effects/TransientShaper'
 import { DeEsser } from '@/components/effects/DeEsser'
+import { Expander } from '@/components/effects/Expander'
 
 function renderEffect(instance: EffectInstance) {
   switch (instance.type) {
@@ -36,6 +37,7 @@ function renderEffect(instance: EffectInstance) {
     case EffectType.Phaser:          return <Phaser instance={instance} />
     case EffectType.TransientShaper: return <TransientShaper instance={instance} />
     case EffectType.DeEsser:         return <DeEsser instance={instance} />
+    case EffectType.Expander:        return <Expander instance={instance} />
     default:                         return null
   }
 }

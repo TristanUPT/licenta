@@ -15,6 +15,7 @@ import { VisualizerPanel } from '@/components/visualization/VisualizerPanel'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
 import { InfoPanel } from '@/components/education/InfoPanel'
 import { RecommendationsPanel } from '@/components/education/RecommendationsPanel'
+import { LessonsPanel } from '@/components/education/LessonsPanel'
 
 const STATUS_DOT: Record<EngineStatus, string> = {
   idle: 'bg-zinc-500',
@@ -60,13 +61,16 @@ function App() {
   const showWaveform   = useUiStore((s) => s.showWaveform)
   const showVisualizer = useUiStore((s) => s.showVisualizer)
   const showEducation  = useUiStore((s) => s.showEducation)
+  const showLessons    = useUiStore((s) => s.showLessons)
   const toggleWaveform   = useUiStore((s) => s.toggleWaveform)
   const toggleVisualizer = useUiStore((s) => s.toggleVisualizer)
   const toggleEducation  = useUiStore((s) => s.toggleEducation)
+  const toggleLessons    = useUiStore((s) => s.toggleLessons)
 
-  const waveLabel = language === 'ro' ? 'Waveform' : 'Waveform'
-  const vizLabel  = language === 'ro' ? 'Vizualizări' : 'Visualizers'
-  const eduLabel  = language === 'ro' ? 'Educație' : 'Education'
+  const waveLabel    = language === 'ro' ? 'Waveform' : 'Waveform'
+  const vizLabel     = language === 'ro' ? 'Vizualizări' : 'Visualizers'
+  const eduLabel     = language === 'ro' ? 'Educație' : 'Education'
+  const lessonsLabel = language === 'ro' ? 'Lecții' : 'Lessons'
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
@@ -84,9 +88,10 @@ function App() {
             {/* Panel toggles — hidden on small screens */}
             {currentFile && (
               <div className="hidden items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:flex">
-                <PanelToggle label={waveLabel}  active={showWaveform}   onClick={toggleWaveform} />
-                <PanelToggle label={vizLabel}   active={showVisualizer} onClick={toggleVisualizer} />
-                <PanelToggle label={eduLabel}   active={showEducation}  onClick={toggleEducation} />
+                <PanelToggle label={waveLabel}    active={showWaveform}   onClick={toggleWaveform} />
+                <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
+                <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
+                <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
               </div>
             )}
 
@@ -133,9 +138,10 @@ function App() {
         {/* Panel toggles on mobile — second row */}
         {currentFile && (
           <div className="mt-2 flex items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:hidden">
-            <PanelToggle label={waveLabel}  active={showWaveform}   onClick={toggleWaveform} />
-            <PanelToggle label={vizLabel}   active={showVisualizer} onClick={toggleVisualizer} />
-            <PanelToggle label={eduLabel}   active={showEducation}  onClick={toggleEducation} />
+            <PanelToggle label={waveLabel}    active={showWaveform}   onClick={toggleWaveform} />
+            <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
+            <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
+            <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
           </div>
         )}
       </header>
@@ -147,6 +153,7 @@ function App() {
             {showVisualizer && <VisualizerPanel />}
             {showEducation  && <InfoPanel />}
             {showEducation  && <RecommendationsPanel />}
+            {showLessons    && <LessonsPanel />}
             <EffectsRack />
           </>
         ) : (

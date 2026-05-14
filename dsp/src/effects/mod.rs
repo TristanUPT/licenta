@@ -8,6 +8,7 @@ pub mod compressor;
 pub mod de_esser;
 pub mod delay;
 pub mod eq;
+pub mod expander;
 pub mod flanger;
 pub mod gain;
 pub mod gate;
@@ -35,6 +36,7 @@ pub enum EffectType {
     Phaser = 11,
     TransientShaper = 12,
     DeEsser = 13,
+    Expander = 14,
 }
 
 impl EffectType {
@@ -54,6 +56,7 @@ impl EffectType {
             11 => Some(EffectType::Phaser),
             12 => Some(EffectType::TransientShaper),
             13 => Some(EffectType::DeEsser),
+            14 => Some(EffectType::Expander),
             _  => None,
         }
     }
@@ -82,5 +85,6 @@ pub fn build(effect_type: EffectType, sample_rate: f32) -> Box<dyn Effect> {
         EffectType::Phaser          => Box::new(phaser::Phaser::new(sample_rate)),
         EffectType::TransientShaper => Box::new(transient_shaper::TransientShaper::new(sample_rate)),
         EffectType::DeEsser         => Box::new(de_esser::DeEsser::new(sample_rate)),
+        EffectType::Expander        => Box::new(expander::Expander::new(sample_rate)),
     }
 }

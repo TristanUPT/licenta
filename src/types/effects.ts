@@ -16,6 +16,7 @@ export const EffectType = {
   Phaser: 11,
   TransientShaper: 12,
   DeEsser: 13,
+  Expander: 14,
 } as const
 
 export type EffectType = (typeof EffectType)[keyof typeof EffectType]
@@ -531,6 +532,31 @@ export const DE_ESSER_PARAM = {
   DRY_WET:      5,
 } as const
 
+// ─── Expander ─────────────────────────────────────────────────────────────
+
+export const EXPANDER_PARAM = {
+  THRESHOLD_DB: 0,
+  RATIO:        1,
+  ATTACK_MS:    2,
+  RELEASE_MS:   3,
+  RANGE_DB:     4,
+  DRY_WET:      5,
+} as const
+
+export const EXPANDER_DEFINITION: EffectDefinition = {
+  type: EffectType.Expander,
+  label: 'Expander',
+  description: 'Downward expander — softens signals below threshold. Gentler than a gate.',
+  params: [
+    { id: EXPANDER_PARAM.THRESHOLD_DB, label: 'Threshold', description: 'Level below which expansion starts.', min: -80, max: 0,   default: -40,  unit: 'dB',  format: (v) => v.toFixed(1) },
+    { id: EXPANDER_PARAM.RATIO,        label: 'Ratio',     description: 'Expansion steepness below threshold.', min: 1, max: 10,    default: 2,                format: (v) => `${v.toFixed(1)}:1` },
+    { id: EXPANDER_PARAM.ATTACK_MS,    label: 'Attack',    description: 'How fast expansion engages.',          min: 0.1, max: 100, default: 5,    unit: 'ms',  scale: 'log', format: (v) => v < 10 ? v.toFixed(1) : v.toFixed(0) },
+    { id: EXPANDER_PARAM.RELEASE_MS,   label: 'Release',   description: 'How fast expansion disengages.',       min: 5, max: 500,   default: 100,  unit: 'ms',  scale: 'log', format: (v) => v.toFixed(0) },
+    { id: EXPANDER_PARAM.RANGE_DB,     label: 'Range',     description: 'Maximum attenuation when fully expanded.', min: -90, max: 0, default: -60, unit: 'dB', format: (v) => v.toFixed(1) },
+    { id: EXPANDER_PARAM.DRY_WET,      label: 'Mix',       description: 'Wet/dry blend.',                       min: 0, max: 1,     default: 1,                format: (v) => `${Math.round(v * 100)}%` },
+  ],
+}
+
 export const DE_ESSER_DEFINITION: EffectDefinition = {
   type: EffectType.DeEsser,
   label: 'De-esser',
@@ -560,4 +586,5 @@ export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.Phaser]: PHASER_DEFINITION,
   [EffectType.TransientShaper]: TRANSIENT_DEFINITION,
   [EffectType.DeEsser]: DE_ESSER_DEFINITION,
+  [EffectType.Expander]: EXPANDER_DEFINITION,
 }

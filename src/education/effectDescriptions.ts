@@ -14,6 +14,7 @@ import {
   EQ_LOW_CUT_PARAM,
   EQ_PARAMS_PER_BAND,
   EffectType,
+  EXPANDER_PARAM,
   GAIN_PARAM,
   GATE_PARAM,
   LIMITER_PARAM,
@@ -879,6 +880,70 @@ const TRANSIENT_DOCS: EffectDocs = {
   },
 }
 
+// ─── Expander ────────────────────────────────────────────────────────────
+
+const EXPANDER_DOCS: EffectDocs = {
+  title: { ro: 'Expander', en: 'Expander' },
+  summary: {
+    ro: {
+      beginner:
+        'Versiunea blândă a unui gate: în loc să taie brusc semnalul sub prag, îl scade treptat. Ideal pentru a reduce zgomotul de fundal sau bleed-ul între instrumente fără a crea artefacte audibile.',
+      advanced:
+        'Downward expander: aplică o reducere de gain sub threshold proporțională cu ratio-ul. La fiecare dB sub threshold, semnalul scade cu (ratio−1) dB extra. Formula: GR_db = (ratio−1) × (level_db − threshold_db), clampuit la range_db. Diferă de gate prin absența stării binare — tranziția este continuă.',
+    },
+    en: {
+      beginner:
+        'The gentle version of a gate: instead of abruptly cutting the signal below threshold, it gradually reduces it. Ideal for reducing background noise or instrument bleed without creating audible artefacts.',
+      advanced:
+        'Downward expander: applies gain reduction below threshold proportional to ratio. For each dB below threshold, the signal drops by an extra (ratio−1) dB. Formula: GR_db = (ratio−1) × (level_db − threshold_db), clamped to range_db. Differs from a gate by the absence of a binary state — the transition is continuous.',
+    },
+  },
+  params: {
+    [EXPANDER_PARAM.THRESHOLD_DB]: {
+      title: { ro: 'Threshold', en: 'Threshold' },
+      body: {
+        ro: { beginner: 'Nivelul de la care expander-ul începe să atenueze. Sunetele mai tari trec nemodificate.', advanced: 'Nivel de declanșare. La threshold = T: pentru level_db < T se aplică GR. La level_db > T: GR = 0. Analog compressorului, dar inversat (acționează sub prag, nu deasupra).' },
+        en: { beginner: 'The level below which the expander starts attenuating. Louder sounds pass through unchanged.', advanced: 'Trigger level. At threshold T: GR is applied for level_db < T. At level_db > T: GR = 0. Analogous to a compressor but inverted (acts below threshold, not above).' },
+      },
+    },
+    [EXPANDER_PARAM.RATIO]: {
+      title: { ro: 'Ratio', en: 'Ratio' },
+      body: {
+        ro: { beginner: 'Cât de agresiv scade semnalul sub prag. 2:1 = fin; 10:1 = aproape de gate.', advanced: 'Rata de expansie. La 2:1: 4 dB sub threshold → GR = −4 dB → ieșire la −24 dB față de threshold. La 10:1: 4 dB sub → GR = −36 dB → practic silențiu. Ratio 1:1 = nicio acțiune.' },
+        en: { beginner: 'How aggressively the signal drops below threshold. 2:1 = subtle; 10:1 = nearly a gate.', advanced: 'Expansion ratio. At 2:1: 4 dB below threshold → GR = −4 dB → output 8 dB below threshold. At 10:1: 4 dB below → GR = −36 dB → near silence. Ratio 1:1 = no action.' },
+      },
+    },
+    [EXPANDER_PARAM.ATTACK_MS]: {
+      title: { ro: 'Attack', en: 'Attack' },
+      body: {
+        ro: { beginner: 'Cât de repede intră atenuarea când semnalul coboară sub prag.', advanced: 'Constanta de timp de attack a envelope follower-ului. Attack rapid → prinde tranzientele scurte sub threshold (glitch-uri, click-uri). Attack lent → ignoră scăderile temporare de nivel.' },
+        en: { beginner: 'How fast the attenuation engages when the signal drops below threshold.', advanced: 'Attack time constant of the envelope follower. Fast attack → catches short sub-threshold transients (glitches, clicks). Slow attack → ignores temporary level drops.' },
+      },
+    },
+    [EXPANDER_PARAM.RELEASE_MS]: {
+      title: { ro: 'Release', en: 'Release' },
+      body: {
+        ro: { beginner: 'Cât de repede revine semnalul la normal după ce depășește din nou pragul.', advanced: 'Constanta de timp de release. Release prea rapid → "chattering" (oscilație rapidă la prag). Release prea lent → atenuarea persistă după ce semnalul revine la normal → tail evident.' },
+        en: { beginner: 'How fast the signal returns to normal after crossing back above threshold.', advanced: 'Release time constant. Too fast → "chattering" (rapid oscillation at threshold). Too slow → attenuation persists after signal recovers → audible tail.' },
+      },
+    },
+    [EXPANDER_PARAM.RANGE_DB]: {
+      title: { ro: 'Range', en: 'Range' },
+      body: {
+        ro: { beginner: 'Cât de silențios poate deveni semnalul. –60 dB = practic silențiu; –20 dB = atenuare moderată.', advanced: 'Atenuarea maximă aplicată. Clampuiește GR_db la range_db. La −∞ expander-ul devine gate (atenuare completă); la −20 dB se obține o expansie mai muzicală, fără blocaj complet.' },
+        en: { beginner: 'How quiet the signal can become. –60 dB = near silence; –20 dB = moderate attenuation.', advanced: 'Maximum applied attenuation. Clamps GR_db at range_db. At −∞ the expander becomes a gate (full attenuation); at −20 dB you get a more musical expansion without complete blocking.' },
+      },
+    },
+    [EXPANDER_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: 'Amestecul dintre semnalul procesat și originalul. 100% = expansie completă.', advanced: 'Blend dry/wet. La valori mai mici de 100% efectul de expansie este proporțional redus, util pentru expansie paralelă subtilă.' },
+        en: { beginner: 'Blend between processed and original signal. 100% = full expansion.', advanced: 'Dry/wet blend. Values below 100% proportionally reduce the expansion effect, useful for subtle parallel expansion.' },
+      },
+    },
+  },
+}
+
 // ─── De-esser ────────────────────────────────────────────────────────────
 
 const DE_ESSER_DOCS: EffectDocs = {
@@ -958,6 +1023,7 @@ export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Phaser]: PHASER_DOCS,
   [EffectType.TransientShaper]: TRANSIENT_DOCS,
   [EffectType.DeEsser]: DE_ESSER_DOCS,
+  [EffectType.Expander]: EXPANDER_DOCS,
 }
 
 import type { EducationLanguage, EducationMode } from '@/store/educationStore'
