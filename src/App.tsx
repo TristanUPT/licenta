@@ -7,6 +7,7 @@ import { usePresetStore } from '@/store/presetStore'
 import { useUiStore } from '@/store/uiStore'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { KeyboardHint } from '@/components/workspace/KeyboardHint'
+import { OnboardingTutorial } from '@/components/workspace/OnboardingTutorial'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
@@ -153,6 +154,7 @@ function App() {
         )}
       </main>
 
+      <OnboardingTutorial />
       <KeyboardHint />
 
       <footer className="border-t border-zinc-800 px-3 py-2 sm:px-6 sm:py-3">
