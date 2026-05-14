@@ -1,6 +1,8 @@
 import { type ReactNode } from 'react'
 import { useEffectsStore } from '@/store/effectsStore'
+import { useEducationStore } from '@/store/educationStore'
 import { EFFECT_DEFINITIONS, type EffectInstance } from '@/types/effects'
+import { EFFECT_DOCS, pickText, pickTitle } from '@/education/effectDescriptions'
 
 interface EffectCardProps {
   instance: EffectInstance
@@ -8,9 +10,15 @@ interface EffectCardProps {
 }
 
 export function EffectCard({ instance, children }: EffectCardProps) {
-  const setBypass = useEffectsStore((s) => s.setBypass)
+  const setBypass    = useEffectsStore((s) => s.setBypass)
   const removeEffect = useEffectsStore((s) => s.removeEffect)
+  const language     = useEducationStore((s) => s.language)
+  const mode         = useEducationStore((s) => s.mode)
+
   const definition = EFFECT_DEFINITIONS[instance.type]
+  const docs       = EFFECT_DOCS[instance.type]
+  const title   = docs ? pickTitle(docs.title, language) : definition.label
+  const summary = docs ? pickText(docs.summary, language, mode) : definition.description
 
   return (
     <div
@@ -20,22 +28,22 @@ export function EffectCard({ instance, children }: EffectCardProps) {
           : 'border-zinc-700 shadow-md shadow-purple-500/5'
       }`}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2">
           <span
             data-drag-handle
-            className="cursor-grab select-none text-base leading-none text-zinc-600 hover:text-zinc-400"
+            className="mt-0.5 cursor-grab select-none text-base leading-none text-zinc-600 hover:text-zinc-400"
             title="Drag to reorder"
             aria-hidden
           >
             ⠿
           </span>
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-100">{definition.label}</h3>
-            <p className="text-[11px] text-zinc-500">{definition.description}</p>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-zinc-100">{title}</h3>
+            <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">{summary}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => setBypass(instance.id, !instance.bypassed)}
             aria-pressed={instance.bypassed}
