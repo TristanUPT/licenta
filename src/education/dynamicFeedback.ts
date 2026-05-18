@@ -10,16 +10,20 @@
 import {
   CHORUS_PARAM,
   COMPRESSOR_PARAM,
+  DE_ESSER_PARAM,
   DELAY_PARAM,
   EQ_BAND_PARAM,
   EQ_BANDS,
+  EXPANDER_PARAM,
   FLANGER_PARAM,
   GAIN_PARAM,
   GATE_PARAM,
   LIMITER_PARAM,
+  PHASER_PARAM,
   PITCH_SHIFT_PARAM,
   REVERB_PARAM,
   SATURATION_PARAM,
+  TRANSIENT_PARAM,
   EffectType,
   eqParamId,
   type EffectInstance,
@@ -904,6 +908,171 @@ function analyzePitchShift(effect: EffectInstance): FeedbackEntry[] {
   return out
 }
 
+// ─── Phaser ──────────────────────────────────────────────────────────────────
+
+const isPhaser       = (e: EffectInstance) => e.type === EffectType.Phaser
+const isTransient    = (e: EffectInstance) => e.type === EffectType.TransientShaper
+const isDeEsser      = (e: EffectInstance) => e.type === EffectType.DeEsser
+const isExpander     = (e: EffectInstance) => e.type === EffectType.Expander
+
+function analyzePhaser(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const rate     = effect.params[PHASER_PARAM.RATE]     ?? 0.5
+  const depth    = effect.params[PHASER_PARAM.DEPTH]    ?? 0.7
+  const feedback = effect.params[PHASER_PARAM.FEEDBACK] ?? 0.5
+  const mix      = effect.params[PHASER_PARAM.DRY_WET]  ?? 0.5
+
+  if (depth < 0.15) {
+    out.push({
+      id: `phaser:low-depth:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Depth foarte mic — efectul de phaser abia se simte. Crește Depth la 0.5–1.0 pentru un "swoosh" clar.', advanced: 'Depth <15 %: modulația LFO a frecvenței de centru all-pass este prea mică — notch-urile de fază se deplasează puțin. Crește la ≥0.5 pentru efect perceptibil.' },
+      en: { beginner: 'Very low Depth — the phaser effect is barely noticeable. Increase Depth to 0.5–1.0 for a clear "swoosh".', advanced: 'Depth <15 %: LFO modulation of all-pass centre frequency is too small — phase notches barely move. Increase to ≥0.5 for a perceptible effect.' },
+    })
+  }
+  if (rate > 4) {
+    out.push({
+      id: `phaser:fast-rate:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Rate-ul mare (>4 Hz) produce un tremolo rapid. Încearcă 0.3–1 Hz pentru un efect de "swoosh" mai lent și muzical.', advanced: 'Rate >4 Hz: LFO depășește banda de timp perceptibil (1–3 Hz). La >8 Hz intră în zona ring-mod. 0.3–1 Hz e intervalul clasic.' },
+      en: { beginner: 'High rate (>4 Hz) creates a fast tremolo-like wobble. Try 0.3–1 Hz for a slower, more musical "swoosh".', advanced: 'Rate >4 Hz: LFO exceeds perceptual slow-rate zone (1–3 Hz). Above 8 Hz it enters ring-mod territory. 0.3–1 Hz is the classic range.' },
+    })
+  }
+  if (Math.abs(feedback) > 0.8) {
+    out.push({
+      id: `phaser:high-feedback:${effect.id}`, severity: 'warning', effectIds: [effect.id],
+      ro: { beginner: 'Feedback mare (>80 %) poate cauza rezonanță puternică sau chiar instabilitate. Scade la 50–70 % pentru siguranță.', advanced: 'Feedback >0.8 → notch-urile all-pass devin profunde și foarte selective — risc de auto-oscilație la anumite frecvențe. Atenție la instabilitate la rate joase.' },
+      en: { beginner: 'High Feedback (>80 %) can cause strong resonance or instability. Reduce to 50–70 % for safety.', advanced: 'Feedback >0.8 → all-pass notches become very deep and selective — risk of self-oscillation at certain frequencies. Watch for instability at low rates.' },
+    })
+  }
+  if (mix > 0.85) {
+    out.push({
+      id: `phaser:full-wet:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Mix 100 % wet nu include semnalul original. Un mix de 50 % ("through-zero") creează clasicul efect de phaser.', advanced: 'Mix=1.0: only wet signal. Through-zero phasing (mix=0.5) este caracteristic phaser-elor clasice: semnalul dry și wet sunt în anti-fază → notch complet la through-zero.' },
+      en: { beginner: '100 % wet mix excludes the original signal. A 50 % mix ("through-zero") creates the classic phaser sound.', advanced: 'Mix=1.0: only wet signal. Through-zero phasing (mix=0.5) is characteristic of classic phasers: dry and wet are in anti-phase → full notch at through-zero.' },
+    })
+  }
+  return out
+}
+
+// ─── Transient Shaper ─────────────────────────────────────────────────────────
+
+function analyzeTransient(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const attack  = effect.params[TRANSIENT_PARAM.ATTACK_GAIN_DB]  ?? 6
+  const sustain = effect.params[TRANSIENT_PARAM.SUSTAIN_GAIN_DB] ?? 0
+  const sense   = effect.params[TRANSIENT_PARAM.SENSITIVITY]     ?? 0.5
+  const mix     = effect.params[TRANSIENT_PARAM.DRY_WET]         ?? 1
+
+  if (attack > 9) {
+    out.push({
+      id: `transient:high-attack:${effect.id}`, severity: 'warning', effectIds: [effect.id],
+      ro: { beginner: 'Attack mare (+9..+12 dB) accentuează puternic tranzientele — poți ajunge la clipping. Adaugă un Limiter după.', advanced: 'Attack >+9 dB: gain aplicat pe transient_f → amplitudinea de vârf crește semnificativ. Risc de clipping dacă nivelul intrării este deja ridicat. Inserează Limiter post-shaper.' },
+      en: { beginner: 'High Attack (+9..+12 dB) strongly emphasises transients — you may hit clipping. Add a Limiter after.', advanced: 'Attack >+9 dB: gain applied on transient_f → peak amplitude increases significantly. Risk of clipping if input level is already high. Insert Limiter post-shaper.' },
+    })
+  }
+  if (sustain < -9) {
+    out.push({
+      id: `transient:low-sustain:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Sustain negativ mare (< −9 dB) taie puternic coada sunetului. Util pentru tobe "seci", dar poate suna nefiresc pe instrumente melodice.', advanced: 'Sustain < −9 dB: gain aplicat pe (1 − transient_f) → atenuare puternică a corpului sunetului. Ideal pentru tobe "gated", dar provoacă click la note lungi — adaugă Reverb scurt după.' },
+      en: { beginner: 'Large negative Sustain (< −9 dB) heavily cuts the sound tail. Useful for "dry" drums, but may sound unnatural on melodic instruments.', advanced: 'Sustain < −9 dB: gain applied on (1 − transient_f) → strong attenuation of sound body. Ideal for "gated" drums, but creates click on long notes — add short Reverb after.' },
+    })
+  }
+  if (attack > 6 && sustain < -6) {
+    out.push({
+      id: `transient:extreme-both:${effect.id}`, severity: 'warning', effectIds: [effect.id],
+      ro: { beginner: 'Attack mare + Sustain negativ mare = efect extrem. Sunetul va fi percutant dar cu coadă eliminată — util pe tobe, riscant pe rest.', advanced: 'Attack >+6 dB + Sustain < −6 dB: contrast extrem transient/sustain. Pe tobe → "snappy" și definit. Pe surse melodice → artefacte de modulație vizibile la spectrogramă.' },
+      en: { beginner: 'High Attack + large negative Sustain = extreme effect. Sound will be punchy but tail-less — useful on drums, risky elsewhere.', advanced: 'Attack >+6 dB + Sustain < −6 dB: extreme transient/sustain contrast. On drums → snappy and defined. On melodic sources → modulation artefacts visible in spectrogram.' },
+    })
+  }
+  if (sense < 0.2) {
+    out.push({
+      id: `transient:low-sense:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Sensitivity mic — detectorul reacționează lent. Crește Sense pentru a prinde tranzientele mai precis.', advanced: 'Sensitivity <0.2: constantele de timp ale envelope follower-ului de detecție sunt lungi → transientele rapide (<5 ms) nu sunt detectate. Crește la 0.5–0.7 pentru percuție.' },
+      en: { beginner: 'Low Sensitivity — the detector reacts slowly. Increase Sense to catch transients more precisely.', advanced: 'Sensitivity <0.2: detection envelope follower time constants are long → fast transients (<5 ms) are not detected. Increase to 0.5–0.7 for percussion.' },
+    })
+  }
+  if (mix < 0.5 && (Math.abs(attack) > 3 || Math.abs(sustain) > 3)) {
+    out.push({
+      id: `transient:low-mix:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Mix sub 50 % — efectul este atenuat semnificativ. Crește Mix pentru a auzi transient shaping-ul.', advanced: 'Mix <0.5: weighted sum (0.5×wet + 0.5×dry) → impactul shaper-ului e redus la jumătate. Normal pentru parallel processing subtil; crește dacă scopul e sculpting agresiv.' },
+      en: { beginner: 'Mix below 50 % — the effect is significantly attenuated. Increase Mix to hear the transient shaping.', advanced: 'Mix <0.5: weighted sum (0.5×wet + 0.5×dry) → shaper impact halved. Normal for subtle parallel processing; increase for aggressive sculpting.' },
+    })
+  }
+  return out
+}
+
+// ─── De-Esser ────────────────────────────────────────────────────────────────
+
+function analyzeDeEsser(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const threshold = effect.params[DE_ESSER_PARAM.THRESHOLD_DB] ?? -30
+  const freqHz    = effect.params[DE_ESSER_PARAM.FREQ_HZ]      ?? 7000
+  const ratio     = effect.params[DE_ESSER_PARAM.RATIO]        ?? 6
+  const listen    = (effect.params[DE_ESSER_PARAM.LISTEN]      ?? 0) >= 0.5
+
+  if (listen) {
+    out.push({
+      id: `deesser:listen-active:${effect.id}`, severity: 'warning', effectIds: [effect.id],
+      ro: { beginner: 'Modul LISTEN este activ — auzi sidechain-ul, nu semnalul procesat. Dezactivează-l înainte de export sau mix final!', advanced: 'LISTEN=1: sidechain-ul HPF (>FREQ_HZ) este rutut direct la ieșire în locul semnalului procesat. Util pentru a găsi frecvența sibilantei — dezactivează înainte de bounce.' },
+      en: { beginner: 'LISTEN mode is active — you hear the sidechain, not the processed signal. Deactivate it before export or final mix!', advanced: 'LISTEN=1: the HPF sidechain (>FREQ_HZ) is routed directly to output instead of the processed signal. Useful for finding sibilance frequency — deactivate before bounce.' },
+    })
+  }
+  if (threshold < -40) {
+    out.push({
+      id: `deesser:low-threshold:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Threshold prea coborât — de-esser-ul se activează prea des, nu doar pe sibilante. Ridică Threshold la −20..−30 dB.', advanced: 'Threshold < −40 dB: de-esser-ul se activează inclusiv pe vocale și consoane non-sibilante → over-processing. Ajustează threshold vizând vârfurile sibilante (tipic −20..−25 dB).' },
+      en: { beginner: 'Threshold too low — the de-esser triggers too often, not just on sibilants. Raise Threshold to −20..−30 dB.', advanced: 'Threshold < −40 dB: de-esser also triggers on vowels and non-sibilant consonants → over-processing. Set threshold targeting sibilant peaks (typically −20..−25 dB).' },
+    })
+  }
+  if (freqHz < 4500) {
+    out.push({
+      id: `deesser:low-freq:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Frecvența de detecție (<4.5 kHz) este prea joasă — de-esser-ul poate afecta prezența vocii, nu doar sibilantele (6–10 kHz).', advanced: 'Sidechain HPF < 4.5 kHz: se include zona "presence" (3–6 kHz) în detecție → risc de pierdere a clarității vocale. Sibilantele "s" și "sh" sunt în 6–10 kHz; setează freq la 5–8 kHz.' },
+      en: { beginner: 'Detection frequency (<4.5 kHz) is too low — de-esser may affect vocal presence, not just sibilants (6–10 kHz).', advanced: 'Sidechain HPF < 4.5 kHz: the "presence" zone (3–6 kHz) is included in detection → risk of losing vocal clarity. "s" and "sh" sibilants are in 6–10 kHz; set freq to 5–8 kHz.' },
+    })
+  }
+  if (ratio > 12) {
+    out.push({
+      id: `deesser:high-ratio:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Ratio mare (>12:1) aproape elimină complet sibilantele. Poate suna nefiresc — încearcă 4:1–8:1 pentru un de-essing subtil.', advanced: 'Ratio >12:1 → de-esser funcționează aproape ca un limiter pe banda sibilantelor. De-essing natural = 3:1–8:1. Ratio >10:1 este rezervat pentru sibilante extreme sau efecte creative.' },
+      en: { beginner: 'High Ratio (>12:1) almost completely eliminates sibilants. Can sound unnatural — try 4:1–8:1 for subtle de-essing.', advanced: 'Ratio >12:1 → de-esser acts almost as a limiter on the sibilant band. Natural de-essing = 3:1–8:1. Ratio >10:1 is reserved for extreme sibilance or creative effects.' },
+    })
+  }
+  return out
+}
+
+// ─── Expander ────────────────────────────────────────────────────────────────
+
+function analyzeExpanderFx(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const threshold = effect.params[EXPANDER_PARAM.THRESHOLD_DB] ?? -40
+  const ratio     = effect.params[EXPANDER_PARAM.RATIO]        ?? 2
+  const attackMs  = effect.params[EXPANDER_PARAM.ATTACK_MS]    ?? 5
+  const rangeDb   = effect.params[EXPANDER_PARAM.RANGE_DB]     ?? -60
+
+  if (ratio >= 8 || rangeDb <= -50) {
+    out.push({
+      id: `expander:noise-gate-territory:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Cu ratio ≥8:1 sau range ≤ −50 dB, expanderul se comportă ca un gate — sunetul sub threshold este aproape eliminat. Dacă asta îți dorești, un Gate dedicat oferă control mai precis.', advanced: 'Downward expander cu ratio ≥8:1 sau range ≤ −50 dB converge la comportament de noise gate. Diferență: expanderul are "knee" soft; gate-ul are threshold hard. Folosește Gate dacă vrei tăiere bruscă, Expander dacă vrei fade-out lin.' },
+      en: { beginner: 'With ratio ≥8:1 or range ≤ −50 dB, the expander behaves like a gate — sound below threshold is nearly eliminated. If that is what you want, a dedicated Gate gives more precise control.', advanced: 'Downward expander with ratio ≥8:1 or range ≤ −50 dB converges to noise gate behaviour. Difference: expander has soft knee; gate has hard threshold. Use Gate for abrupt cut, Expander for smooth fade-out.' },
+    })
+  }
+  if (threshold > -20) {
+    out.push({
+      id: `expander:high-threshold:${effect.id}`, severity: 'warning', effectIds: [effect.id],
+      ro: { beginner: 'Threshold prea sus (> −20 dB) — expanderul atenuează și momentele tari din semnal, nu doar zgomotul. Coboară la −40..−50 dB pentru a afecta doar fundalul de zgomot.', advanced: 'Threshold > −20 dB: expanderul intră în acțiune și la semnale utile (voce, instrumente). Poate crea "pumping" audibil — tipic dorit la noise floor −50..−60 dB, deci threshold −40..−55 dB.' },
+      en: { beginner: 'Threshold too high (> −20 dB) — the expander attenuates loud parts of the signal too, not just noise. Lower to −40..−50 dB to affect only the noise floor.', advanced: 'Threshold > −20 dB: expander engages on useful signals (voice, instruments). Can create audible pumping — typically target noise floor −50..−60 dB, so set threshold −40..−55 dB.' },
+    })
+  }
+  if (attackMs < 1) {
+    out.push({
+      id: `expander:fast-attack:${effect.id}`, severity: 'info', effectIds: [effect.id],
+      ro: { beginner: 'Attack foarte rapid (<1 ms) poate tăia brusc tranzientele. Încearcă 3–10 ms pentru o deschidere mai naturală.', advanced: 'Attack <1 ms: expanderul atinge gain-reduction țintă în <1 ms → clipper temporar la onsetul tranzientelor. 3–10 ms este pragul standard sub care apar artefacte de click percutile.' },
+      en: { beginner: 'Very fast attack (<1 ms) may abruptly clip transients. Try 3–10 ms for a more natural opening.', advanced: 'Attack <1 ms: expander reaches target gain-reduction in <1 ms → temporary clipper at transient onset. 3–10 ms is the standard threshold below which percussive click artefacts appear.' },
+    })
+  }
+  return out
+}
+
 // ─── public API ──────────────────────────────────────────────────────────
 
 export function analyzeAll(effects: EffectInstance[]): FeedbackEntry[] {
@@ -920,6 +1089,10 @@ export function analyzeAll(effects: EffectInstance[]): FeedbackEntry[] {
     else if (isChorus(e))      out.push(...analyzeChorus(e))
     else if (isFlanger(e))     out.push(...analyzeFlanger(e))
     else if (isPitchShift(e))  out.push(...analyzePitchShift(e))
+    else if (isPhaser(e))      out.push(...analyzePhaser(e))
+    else if (isTransient(e))   out.push(...analyzeTransient(e))
+    else if (isDeEsser(e))     out.push(...analyzeDeEsser(e))
+    else if (isExpander(e))    out.push(...analyzeExpanderFx(e))
   }
   out.push(...analyzeChain(effects))
   out.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])

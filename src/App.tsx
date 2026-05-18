@@ -8,6 +8,7 @@ import { useUiStore } from '@/store/uiStore'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { KeyboardHint } from '@/components/workspace/KeyboardHint'
 import { OnboardingTutorial } from '@/components/workspace/OnboardingTutorial'
+import { SettingsPanel } from '@/components/workspace/SettingsPanel'
 import { FileDropZone } from '@/components/workspace/FileDropZone'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
@@ -129,6 +130,9 @@ function App() {
                 }`}
               >EN</button>
             </div>
+
+            {/* Settings */}
+            <SettingsPanel />
 
             {/* Engine status dot */}
             <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
