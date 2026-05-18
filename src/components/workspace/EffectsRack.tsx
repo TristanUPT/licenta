@@ -20,6 +20,7 @@ import { Phaser } from '@/components/effects/Phaser'
 import { TransientShaper } from '@/components/effects/TransientShaper'
 import { DeEsser } from '@/components/effects/DeEsser'
 import { Expander } from '@/components/effects/Expander'
+import { NoiseReduction } from '@/components/effects/NoiseReduction'
 
 function renderEffect(instance: EffectInstance) {
   switch (instance.type) {
@@ -38,6 +39,7 @@ function renderEffect(instance: EffectInstance) {
     case EffectType.TransientShaper: return <TransientShaper instance={instance} />
     case EffectType.DeEsser:         return <DeEsser instance={instance} />
     case EffectType.Expander:        return <Expander instance={instance} />
+    case EffectType.NoiseReduction:  return <NoiseReduction instance={instance} />
     default:                         return null
   }
 }

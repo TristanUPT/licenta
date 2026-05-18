@@ -17,6 +17,7 @@ pub mod phaser;
 pub mod pitch_shift;
 pub mod reverb;
 pub mod saturation;
+pub mod noise_reduction;
 pub mod transient_shaper;
 
 #[repr(u32)]
@@ -37,6 +38,7 @@ pub enum EffectType {
     TransientShaper = 12,
     DeEsser = 13,
     Expander = 14,
+    NoiseReduction = 15,
 }
 
 impl EffectType {
@@ -57,6 +59,7 @@ impl EffectType {
             12 => Some(EffectType::TransientShaper),
             13 => Some(EffectType::DeEsser),
             14 => Some(EffectType::Expander),
+            15 => Some(EffectType::NoiseReduction),
             _  => None,
         }
     }
@@ -86,5 +89,6 @@ pub fn build(effect_type: EffectType, sample_rate: f32) -> Box<dyn Effect> {
         EffectType::TransientShaper => Box::new(transient_shaper::TransientShaper::new(sample_rate)),
         EffectType::DeEsser         => Box::new(de_esser::DeEsser::new(sample_rate)),
         EffectType::Expander        => Box::new(expander::Expander::new(sample_rate)),
+        EffectType::NoiseReduction  => Box::new(noise_reduction::NoiseReduction::new(sample_rate)),
     }
 }

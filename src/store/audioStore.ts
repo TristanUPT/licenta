@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
+import { computeIntegratedLufs } from '@/audio/lufs'
 
 export interface LoadedFile {
   name: string
@@ -25,6 +26,9 @@ interface AudioState {
   /** Current playback position in seconds (updated from rAF). */
   playbackPosition: number
 
+  /** ITU-R BS.1770-4 integrated loudness of loaded file (null when no file). */
+  integratedLufs: number | null
+
   loading: boolean
   error: string | null
 
@@ -49,19 +53,25 @@ export const useAudioStore = create<AudioState>()(
       loopStart: 0,
       loopEnd: 0,
       playbackPosition: 0,
+      integratedLufs: null,
       loading: false,
       error: null,
 
-      setFile: (file, buffer) => set({
-        currentFile: file,
-        audioBuffer: buffer,
-        isPlaying: false,
-        playbackPosition: 0,
-        loopStart: 0,
-        loopEnd: file.duration,
-        isLooping: false,
-        error: null,
-      }, undefined, 'audio/setFile'),
+      setFile: (file, buffer) => {
+        // Run LUFS in a microtask so it doesn't block the render.
+        const lufs = computeIntegratedLufs(buffer)
+        set({
+          currentFile: file,
+          audioBuffer: buffer,
+          isPlaying: false,
+          playbackPosition: 0,
+          loopStart: 0,
+          loopEnd: file.duration,
+          isLooping: false,
+          integratedLufs: isFinite(lufs) ? lufs : null,
+          error: null,
+        }, undefined, 'audio/setFile')
+      },
 
       clearFile: () => set({
         currentFile: null,
@@ -71,6 +81,7 @@ export const useAudioStore = create<AudioState>()(
         loopStart: 0,
         loopEnd: 0,
         isLooping: false,
+        integratedLufs: null,
       }, undefined, 'audio/clearFile'),
 
       setPlaying: (playing) => set({ isPlaying: playing }, undefined, 'audio/setPlaying'),

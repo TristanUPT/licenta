@@ -18,6 +18,7 @@ import {
   GAIN_PARAM,
   GATE_PARAM,
   LIMITER_PARAM,
+  NOISE_REDUCTION_PARAM,
   PHASER_PARAM,
   REVERB_PARAM,
   SATURATION_PARAM,
@@ -1008,6 +1009,63 @@ const DE_ESSER_DOCS: EffectDocs = {
   },
 }
 
+// ─── Noise Reduction ─────────────────────────────────────────────────────
+
+const NOISE_REDUCTION_DOCS: EffectDocs = {
+  title: { ro: 'Noise Reduction', en: 'Noise Reduction' },
+  summary: {
+    ro: {
+      beginner:
+        'Reduce zgomotul de fundal (hiss, hum, ventilație) auto-adaptiv. Estimează nivelul de zgomot din perioadele liniștite și reduce automat frecvențele care se potrivesc cu profilul de zgomot.',
+      advanced:
+        'Wiener gain monoband cu estimare adaptivă a noise floor. Algoritmul urmărește un "leaky minimum" al semnalului pentru a estima noise_est; aplică G = env² / (env² + α·noise_est²) per sample, unde α controlează over-subtraction. Granița de artefacte (musical noise) apare la α > 6 sau floor < −20 dB.',
+    },
+    en: {
+      beginner:
+        'Reduces background noise (hiss, hum, ventilation) adaptively. Estimates the noise level from quiet passages and automatically attenuates frequencies matching the noise profile.',
+      advanced:
+        'Single-band Wiener gain with adaptive noise floor estimation. Tracks a "leaky minimum" envelope to estimate noise_est; applies G = env² / (env² + α·noise_est²) per sample, where α controls over-subtraction. Artefact boundary (musical noise) occurs at α > 6 or floor < −20 dB.',
+    },
+  },
+  params: {
+    [NOISE_REDUCTION_PARAM.REDUCTION_DB]: {
+      title: { ro: 'Reduction', en: 'Reduction' },
+      body: {
+        ro: { beginner: 'Cât de mult poate fi atenuat zgomotul detectat. –18 dB este un punct de plecare bun.', advanced: 'Nivelul minim de gain aplicat (floor = 10^(Reduction/20)). Sub –20 dB cresc artefactele spectrale; −6..−12 dB este transparent dar mai puțin agresiv.' },
+        en: { beginner: 'How much the detected noise can be attenuated. –18 dB is a good starting point.', advanced: 'Minimum gain floor (floor = 10^(Reduction/20)). Below –20 dB spectral artefacts increase; −6..−12 dB is transparent but less aggressive.' },
+      },
+    },
+    [NOISE_REDUCTION_PARAM.SENSITIVITY]: {
+      title: { ro: 'Sensitivity', en: 'Sensitivity' },
+      body: {
+        ro: { beginner: 'Cât de agresiv este detectat zgomotul. Valori mari reduc mai mult, dar pot distorsiona semnalul util.', advanced: 'Mapează la oversubtraction α ∈ [1, 8]. α ridicat → Wiener gain coboară agresiv când SNR estimat < 1 → risc de musical noise la voci sau instrumente cu sustain.' },
+        en: { beginner: 'How aggressively noise is detected. Higher values reduce more but may distort the wanted signal.', advanced: 'Maps to oversubtraction α ∈ [1, 8]. High α → Wiener gain drops aggressively when estimated SNR < 1 → musical noise risk on voices or sustained instruments.' },
+      },
+    },
+    [NOISE_REDUCTION_PARAM.ATTACK_MS]: {
+      title: { ro: 'Attack', en: 'Attack' },
+      body: {
+        ro: { beginner: 'Cât de repede intră reducerea de zgomot. Valori mai mici = mai rapid dar poate tăia tranzientele.', advanced: 'Constanta de timp de attack a gain smoother-ului. Attack prea rapid (<2 ms) → clipper temporar la onset-ul semnalelor tari. 5–15 ms este practic.' },
+        en: { beginner: 'How fast noise reduction engages. Lower = faster but may clip transients.', advanced: 'Attack time constant of the gain smoother. Too fast (<2 ms) → temporary clipper at signal onset. 5–15 ms is practical.' },
+      },
+    },
+    [NOISE_REDUCTION_PARAM.RELEASE_MS]: {
+      title: { ro: 'Release', en: 'Release' },
+      body: {
+        ro: { beginner: 'Cât de repede dispare reducerea de zgomot când semnalul revine. Valori mai mari = tranziție mai lină.', advanced: 'Constanta de timp de release. Release prea scurt → chattering vizibil la marginile semnalului. Release prea lung → "gating tail" audibil. 50–100 ms este transparent.' },
+        en: { beginner: 'How fast noise reduction fades when signal returns. Higher values = smoother transition.', advanced: 'Release time constant. Too short → visible chattering at signal edges. Too long → audible gating tail. 50–100 ms is transparent.' },
+      },
+    },
+    [NOISE_REDUCTION_PARAM.DRY_WET]: {
+      title: { ro: 'Mix', en: 'Mix' },
+      body: {
+        ro: { beginner: 'Amestecul dintre semnalul tratat și originalul. 100% = reducere completă; 50% = reducere paralelă subtilă.', advanced: 'Parallel noise reduction. La Mix < 100%, natural noise floor și semnalul procesat se combină. Util pentru a evita complet artefactele la expensă de reducere mai mică.' },
+        en: { beginner: 'Blend between processed and original signal. 100% = full reduction; 50% = subtle parallel processing.', advanced: 'Parallel noise reduction. At Mix < 100%, natural noise floor and processed signal combine. Useful to completely avoid artefacts at the cost of less reduction.' },
+      },
+    },
+  },
+}
+
 export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.Gain]: GAIN_DOCS,
   [EffectType.Compressor]: COMPRESSOR_DOCS,
@@ -1024,6 +1082,7 @@ export const EFFECT_DOCS: Record<EffectType, EffectDocs> = {
   [EffectType.TransientShaper]: TRANSIENT_DOCS,
   [EffectType.DeEsser]: DE_ESSER_DOCS,
   [EffectType.Expander]: EXPANDER_DOCS,
+  [EffectType.NoiseReduction]: NOISE_REDUCTION_DOCS,
 }
 
 import type { EducationLanguage, EducationMode } from '@/store/educationStore'

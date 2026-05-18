@@ -17,6 +17,7 @@ export const EffectType = {
   TransientShaper: 12,
   DeEsser: 13,
   Expander: 14,
+  NoiseReduction: 15,
 } as const
 
 export type EffectType = (typeof EffectType)[keyof typeof EffectType]
@@ -571,6 +572,59 @@ export const DE_ESSER_DEFINITION: EffectDefinition = {
   ],
 }
 
+// ─── Noise Reduction ──────────────────────────────────────────────────────
+
+export const NOISE_REDUCTION_PARAM = {
+  REDUCTION_DB: 0,
+  SENSITIVITY:  1,
+  ATTACK_MS:    2,
+  RELEASE_MS:   3,
+  DRY_WET:      4,
+} as const
+
+export const NOISE_REDUCTION_DEFINITION: EffectDefinition = {
+  type: EffectType.NoiseReduction,
+  label: 'Noise Reduction',
+  description: 'Wiener-gain spectral noise reduction. Automatically estimates noise floor and attenuates it.',
+  params: [
+    {
+      id: NOISE_REDUCTION_PARAM.REDUCTION_DB,
+      label: 'Reduction',
+      description: 'Maximum attenuation applied to noise.',
+      min: -24, max: 0, default: -18, unit: 'dB',
+      format: (v) => v.toFixed(1),
+    },
+    {
+      id: NOISE_REDUCTION_PARAM.SENSITIVITY,
+      label: 'Sensitivity',
+      description: 'Oversubtraction: higher = more aggressive noise removal, may introduce artifacts.',
+      min: 0, max: 1, default: 0.5,
+      format: (v) => `${Math.round(v * 100)}%`,
+    },
+    {
+      id: NOISE_REDUCTION_PARAM.ATTACK_MS,
+      label: 'Attack',
+      description: 'How fast gain reduction engages.',
+      min: 1, max: 50, default: 5, unit: 'ms', scale: 'log',
+      format: (v) => v.toFixed(1),
+    },
+    {
+      id: NOISE_REDUCTION_PARAM.RELEASE_MS,
+      label: 'Release',
+      description: 'How fast gain recovers after noise.',
+      min: 10, max: 200, default: 80, unit: 'ms', scale: 'log',
+      format: (v) => v.toFixed(0),
+    },
+    {
+      id: NOISE_REDUCTION_PARAM.DRY_WET,
+      label: 'Mix',
+      description: 'Blend processed (wet) with dry signal.',
+      min: 0, max: 1, default: 1,
+      format: (v) => `${Math.round(v * 100)}%`,
+    },
+  ],
+}
+
 export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.Gain]: GAIN_DEFINITION,
   [EffectType.Compressor]: COMPRESSOR_DEFINITION,
@@ -587,4 +641,5 @@ export const EFFECT_DEFINITIONS: Record<EffectType, EffectDefinition> = {
   [EffectType.TransientShaper]: TRANSIENT_DEFINITION,
   [EffectType.DeEsser]: DE_ESSER_DEFINITION,
   [EffectType.Expander]: EXPANDER_DEFINITION,
+  [EffectType.NoiseReduction]: NOISE_REDUCTION_DEFINITION,
 }

@@ -26,6 +26,7 @@ const EFFECT_COLOR: Record<EffectType, string> = {
   [EffectType.TransientShaper]: 'border-l-amber-500',
   [EffectType.DeEsser]:         'border-l-amber-500',
   [EffectType.Expander]:        'border-l-amber-500',
+  [EffectType.NoiseReduction]:  'border-l-teal-500',
 }
 
 export function EffectCard({ instance, children }: EffectCardProps) {

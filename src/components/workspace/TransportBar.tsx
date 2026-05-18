@@ -73,10 +73,11 @@ export function TransportBar() {
     }
   }
 
-  const clipped    = useAnalysisStore((s) => s.clipped)
-  const clearClip  = useAnalysisStore((s) => s.clearClip)
-  const masterPeak = useAnalysisStore((s) => s.masterPeak)
-  const masterRms  = useAnalysisStore((s) => s.masterRms)
+  const clipped        = useAnalysisStore((s) => s.clipped)
+  const clearClip      = useAnalysisStore((s) => s.clearClip)
+  const masterPeak     = useAnalysisStore((s) => s.masterPeak)
+  const masterRms      = useAnalysisStore((s) => s.masterRms)
+  const integratedLufs = useAudioStore((s) => s.integratedLufs)
 
   function toDbfs(lin: number) {
     if (lin <= 0) return '-∞'
@@ -156,6 +157,14 @@ export function TransportBar() {
               {toDbfs(masterRms)}
             </span>
           </div>
+          {integratedLufs !== null && (
+            <div className="flex items-baseline gap-1">
+              <span className="font-mono text-[10px] text-zinc-500">lufs</span>
+              <span className={`w-16 text-right font-mono text-[11px] tabular-nums ${integratedLufs > -14 ? 'text-amber-300' : integratedLufs > -23 ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                {integratedLufs.toFixed(1)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Filename + actions — visible only on sm+ inline, on mobile goes to row 2 */}

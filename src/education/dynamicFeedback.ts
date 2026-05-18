@@ -19,6 +19,7 @@ import {
   GAIN_PARAM,
   GATE_PARAM,
   LIMITER_PARAM,
+  NOISE_REDUCTION_PARAM,
   PHASER_PARAM,
   PITCH_SHIFT_PARAM,
   REVERB_PARAM,
@@ -910,10 +911,11 @@ function analyzePitchShift(effect: EffectInstance): FeedbackEntry[] {
 
 // ─── Phaser ──────────────────────────────────────────────────────────────────
 
-const isPhaser       = (e: EffectInstance) => e.type === EffectType.Phaser
-const isTransient    = (e: EffectInstance) => e.type === EffectType.TransientShaper
-const isDeEsser      = (e: EffectInstance) => e.type === EffectType.DeEsser
-const isExpander     = (e: EffectInstance) => e.type === EffectType.Expander
+const isPhaser        = (e: EffectInstance) => e.type === EffectType.Phaser
+const isTransient     = (e: EffectInstance) => e.type === EffectType.TransientShaper
+const isDeEsser       = (e: EffectInstance) => e.type === EffectType.DeEsser
+const isExpander      = (e: EffectInstance) => e.type === EffectType.Expander
+const isNoiseReduction = (e: EffectInstance) => e.type === EffectType.NoiseReduction
 
 function analyzePhaser(effect: EffectInstance): FeedbackEntry[] {
   const out: FeedbackEntry[] = []
@@ -1073,6 +1075,48 @@ function analyzeExpanderFx(effect: EffectInstance): FeedbackEntry[] {
   return out
 }
 
+// ─── Noise Reduction ─────────────────────────────────────────────────────
+
+function analyzeNoiseReduction(effect: EffectInstance): FeedbackEntry[] {
+  const out: FeedbackEntry[] = []
+  const reduction = effect.params[NOISE_REDUCTION_PARAM.REDUCTION_DB] ?? -18
+  const sensitivity = effect.params[NOISE_REDUCTION_PARAM.SENSITIVITY] ?? 0.5
+
+  if (reduction < -20) {
+    out.push({
+      id: `nr:${effect.id}:heavy-reduction`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: {
+        beginner: 'Reducere de zgomot mare — la valori foarte mici pot apărea artefacte muzicale ("metallic bubbling"). Redu Reduction la -12..-18 dB.',
+        advanced: `Reduction ${reduction.toFixed(1)} dB: oversubtraction agresivă poate introduce distorsii spectrale (musical noise). Floor la –18..–12 dB este mai puțin artefactuos.`,
+      },
+      en: {
+        beginner: 'Heavy noise reduction — very low values can introduce musical artefacts ("metallic bubbling"). Try Reduction at -12 to -18 dB.',
+        advanced: `Reduction ${reduction.toFixed(1)} dB: aggressive oversubtraction may introduce spectral distortion (musical noise). –18..–12 dB floor is less artefact-prone.`,
+      },
+    })
+  }
+
+  if (sensitivity > 0.8) {
+    out.push({
+      id: `nr:${effect.id}:high-sensitivity`,
+      severity: 'info',
+      effectIds: [effect.id],
+      ro: {
+        beginner: 'Sensitivity ridicat — zgomotul va fi mai agresiv redus, dar riscul de artefacte crește. Reduce-l la 40–60% dacă auzi distorsii.',
+        advanced: 'Sensitivity >80% → oversubtraction α >6.6. SNR estimator poate trage în jos și componentele utile la scăderi de nivel, generând musical noise.',
+      },
+      en: {
+        beginner: 'High sensitivity — noise will be reduced more aggressively but artefact risk increases. Lower to 40–60% if you hear distortion.',
+        advanced: 'Sensitivity >80% → oversubtraction α >6.6. SNR estimator may also attenuate signal components during level drops, generating musical noise.',
+      },
+    })
+  }
+
+  return out
+}
+
 // ─── public API ──────────────────────────────────────────────────────────
 
 export function analyzeAll(effects: EffectInstance[]): FeedbackEntry[] {
@@ -1092,7 +1136,8 @@ export function analyzeAll(effects: EffectInstance[]): FeedbackEntry[] {
     else if (isPhaser(e))      out.push(...analyzePhaser(e))
     else if (isTransient(e))   out.push(...analyzeTransient(e))
     else if (isDeEsser(e))     out.push(...analyzeDeEsser(e))
-    else if (isExpander(e))    out.push(...analyzeExpanderFx(e))
+    else if (isExpander(e))         out.push(...analyzeExpanderFx(e))
+    else if (isNoiseReduction(e))   out.push(...analyzeNoiseReduction(e))
   }
   out.push(...analyzeChain(effects))
   out.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])
