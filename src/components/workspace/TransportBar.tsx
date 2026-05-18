@@ -102,22 +102,6 @@ export function TransportBar() {
             CLIP
           </button>
         </div>
-        {/* Numeric level readout */}
-        <div className="hidden flex-col items-start gap-0.5 sm:flex">
-          <div className="flex items-baseline gap-1">
-            <span className="w-8 text-right font-mono text-[10px] text-zinc-500">pk</span>
-            <span className={`font-mono text-[11px] tabular-nums ${masterPeak >= 1 ? 'text-red-400' : masterPeak > 0.5 ? 'text-amber-300' : 'text-zinc-300'}`}>
-              {toDbfs(masterPeak)}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="w-8 text-right font-mono text-[10px] text-zinc-500">rms</span>
-            <span className="font-mono text-[11px] tabular-nums text-zinc-400">
-              {toDbfs(masterRms)}
-            </span>
-          </div>
-        </div>
-
         <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={handlePlayPause}
@@ -156,6 +140,22 @@ export function TransportBar() {
           <span className="text-zinc-100">{formatTime(playbackPosition)}</span>
           <span className="text-zinc-600">/</span>
           <span className="text-zinc-500">{formatTime(duration)}</span>
+        </div>
+
+        {/* Numeric level readout — fixed width so it never shifts adjacent elements */}
+        <div className="hidden w-24 shrink-0 flex-col items-end gap-0.5 sm:flex">
+          <div className="flex items-baseline gap-1">
+            <span className="font-mono text-[10px] text-zinc-500">pk</span>
+            <span className={`w-16 text-right font-mono text-[11px] tabular-nums ${masterPeak >= 1 ? 'text-red-400' : masterPeak > 0.5 ? 'text-amber-300' : 'text-zinc-300'}`}>
+              {toDbfs(masterPeak)}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="font-mono text-[10px] text-zinc-500">rms</span>
+            <span className="w-16 text-right font-mono text-[11px] tabular-nums text-zinc-400">
+              {toDbfs(masterRms)}
+            </span>
+          </div>
         </div>
 
         {/* Filename + actions — visible only on sm+ inline, on mobile goes to row 2 */}
