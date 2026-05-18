@@ -101,17 +101,20 @@ export function SynthLab() {
 
   const [activeNote, setActiveNote] = useState<number | null>(null)
   const heldKeys = useRef<Set<string>>(new Set())
+  const activeNoteRef = useRef<number | null>(null)
 
   const triggerNoteOn = useCallback((midi: number) => {
     if (!active) return
     noteOn(midiToFreq(midi))
     setActiveNote(midi)
+    activeNoteRef.current = midi
   }, [active, noteOn])
 
   const triggerNoteOff = useCallback(() => {
     if (!active) return
     noteOff()
     setActiveNote(null)
+    activeNoteRef.current = null
   }, [active, noteOff])
 
   // Keyboard shortcuts
@@ -126,9 +129,17 @@ export function SynthLab() {
       }
     }
     function onKeyUp(e: KeyboardEvent) {
-      if (KEY_BINDINGS[e.code] !== undefined) {
+      const midi = KEY_BINDINGS[e.code]
+      if (midi !== undefined) {
         heldKeys.current.delete(e.code)
-        if (heldKeys.current.size === 0) triggerNoteOff()
+        if (heldKeys.current.size === 0) {
+          triggerNoteOff()
+        } else if (activeNoteRef.current === midi) {
+          // Released the active note while others are still held — retrigger last held
+          const codes = [...heldKeys.current]
+          const lastMidi = KEY_BINDINGS[codes[codes.length - 1] ?? '']
+          if (lastMidi !== undefined) triggerNoteOn(lastMidi)
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -155,9 +166,14 @@ export function SynthLab() {
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-zinc-300">
-          {ro ? 'Synth Lab' : 'Synth Lab'}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-zinc-300">Synth Lab</h2>
+          {activeNote !== null && (
+            <span className="font-mono text-xs font-semibold text-purple-400">
+              {PIANO_KEYS.find((k) => k.midi === activeNote)?.label ?? ''}
+            </span>
+          )}
+        </div>
         <button
           onClick={() => { active ? stopSynth() : void startSynth() }}
           className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${

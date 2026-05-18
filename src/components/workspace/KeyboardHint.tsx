@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react'
 import { useEducationStore } from '@/store/educationStore'
+import { useSynthStore } from '@/store/synthStore'
 
 const STORAGE_KEY = 'soundlab-kb-hint-dismissed'
 
 const SHORTCUTS = [
   { key: 'Space',   ro: 'Play / Pause',         en: 'Play / Pause' },
-  { key: 'S',       ro: 'Stop',                  en: 'Stop' },
-  { key: 'L',       ro: 'Toggle loop',           en: 'Toggle loop' },
+  { key: 'S',       ro: 'Stop',                  en: 'Stop',        synthNote: true },
+  { key: 'L',       ro: 'Toggle loop',           en: 'Toggle loop', synthNote: true },
   { key: 'I',       ro: 'Set loop in',           en: 'Set loop in' },
-  { key: 'O',       ro: 'Set loop out',          en: 'Set loop out' },
+  { key: 'O',       ro: 'Set loop out',          en: 'Set loop out', synthNote: true },
   { key: 'B',       ro: 'A/B bypass',            en: 'A/B bypass' },
   { key: 'Ctrl+Z',  ro: 'Undo efecte',           en: 'Undo effects' },
   { key: 'Ctrl+Y',  ro: 'Redo efecte',           en: 'Redo effects' },
-]
+] as const
 
 export function KeyboardHint() {
   const language = useEducationStore((s) => s.language)
+  const synthActive = useSynthStore((s) => s.active)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -29,8 +31,12 @@ export function KeyboardHint() {
 
   if (!visible) return null
 
-  const title  = language === 'ro' ? 'Scurtături tastatură' : 'Keyboard shortcuts'
-  const closeL = language === 'ro' ? 'Am înțeles' : 'Got it'
+  const ro = language === 'ro'
+  const title      = ro ? 'Scurtături tastatură' : 'Keyboard shortcuts'
+  const closeL     = ro ? 'Am înțeles' : 'Got it'
+  const synthNote  = ro
+    ? '* dezactivat când Synth Lab e pornit'
+    : '* disabled when Synth Lab is active'
 
   return (
     <div className="fixed bottom-20 right-4 z-50 w-64 rounded-xl border border-zinc-700 bg-zinc-900 p-4 shadow-2xl sm:right-6">
@@ -47,15 +53,19 @@ export function KeyboardHint() {
         </button>
       </div>
       <ul className="space-y-1.5">
-        {SHORTCUTS.map((s) => (
-          <li key={s.key} className="flex items-center justify-between">
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-200">
-              {s.key}
-            </span>
-            <span className="text-[11px] text-zinc-400">{s[language]}</span>
-          </li>
-        ))}
+        {SHORTCUTS.map((s) => {
+          const dimmed = synthActive && 'synthNote' in s && s.synthNote
+          return (
+            <li key={s.key} className={`flex items-center justify-between ${dimmed ? 'opacity-40' : ''}`}>
+              <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-200">
+                {s.key}{'synthNote' in s && s.synthNote ? ' *' : ''}
+              </span>
+              <span className="text-[11px] text-zinc-400">{s[language]}</span>
+            </li>
+          )
+        })}
       </ul>
+      <p className="mt-2 text-[10px] text-zinc-600">{synthNote}</p>
       <button
         onClick={dismiss}
         className="mt-3 w-full rounded-md bg-purple-600/20 py-1.5 text-[11px] font-medium text-purple-300 transition hover:bg-purple-600/30"

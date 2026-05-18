@@ -69,16 +69,18 @@ export const useSynthStore = create<SynthState>()(
         startSynth: async () => {
           if (getStatus().status !== 'running') await startEngine()
           engine.synthCreate()
-          // Push current params to worklet
+          // Defer param push so synth_create is processed by the worklet first
           const s = get()
-          setParamIfActive(SYNTH_PARAM.OSC_TYPE,   s.oscType)
-          setParamIfActive(SYNTH_PARAM.ATTACK_MS,  s.attackMs)
-          setParamIfActive(SYNTH_PARAM.DECAY_MS,   s.decayMs)
-          setParamIfActive(SYNTH_PARAM.SUSTAIN,    s.sustain)
-          setParamIfActive(SYNTH_PARAM.RELEASE_MS, s.releaseMs)
-          setParamIfActive(SYNTH_PARAM.CUTOFF_HZ,  s.cutoffHz)
-          setParamIfActive(SYNTH_PARAM.RESONANCE,  s.resonance)
-          setParamIfActive(SYNTH_PARAM.GAIN_DB,    s.gainDb)
+          setTimeout(() => {
+            setParamIfActive(SYNTH_PARAM.OSC_TYPE,   s.oscType)
+            setParamIfActive(SYNTH_PARAM.ATTACK_MS,  s.attackMs)
+            setParamIfActive(SYNTH_PARAM.DECAY_MS,   s.decayMs)
+            setParamIfActive(SYNTH_PARAM.SUSTAIN,    s.sustain)
+            setParamIfActive(SYNTH_PARAM.RELEASE_MS, s.releaseMs)
+            setParamIfActive(SYNTH_PARAM.CUTOFF_HZ,  s.cutoffHz)
+            setParamIfActive(SYNTH_PARAM.RESONANCE,  s.resonance)
+            setParamIfActive(SYNTH_PARAM.GAIN_DB,    s.gainDb)
+          }, 0)
           set({ active: true }, undefined, 'synth/start')
         },
 

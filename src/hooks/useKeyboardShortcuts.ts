@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAudioStore } from '@/store/audioStore'
 import { useEffectsStore } from '@/store/effectsStore'
+import { useSynthStore } from '@/store/synthStore'
 import * as transport from '@/audio/transport'
 import { usePresetStore } from '@/store/presetStore'
 
@@ -55,6 +56,8 @@ export function useKeyboardShortcuts() {
 
         case 'KeyS':
         case 'Escape': {
+          // S is also a synth note key — skip transport when synth is active
+          if (e.code === 'KeyS' && useSynthStore.getState().active) break
           if (!audioBuffer) return
           transport.stop()
           setPlaying(false)
@@ -63,6 +66,8 @@ export function useKeyboardShortcuts() {
         }
 
         case 'KeyL': {
+          // L is also a synth note key — skip transport when synth is active
+          if (useSynthStore.getState().active) break
           if (!audioBuffer) return
           toggleLoop()
           break
@@ -76,6 +81,8 @@ export function useKeyboardShortcuts() {
         }
 
         case 'KeyO': {
+          // O is also a synth note key — skip transport when synth is active
+          if (useSynthStore.getState().active) break
           if (!audioBuffer) return
           const newStart = Math.min(loopStart, playbackPosition - 0.1)
           setLoopRegion(newStart, playbackPosition)

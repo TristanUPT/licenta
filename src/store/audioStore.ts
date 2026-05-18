@@ -58,8 +58,6 @@ export const useAudioStore = create<AudioState>()(
       error: null,
 
       setFile: (file, buffer) => {
-        // Run LUFS in a microtask so it doesn't block the render.
-        const lufs = computeIntegratedLufs(buffer)
         set({
           currentFile: file,
           audioBuffer: buffer,
@@ -68,9 +66,13 @@ export const useAudioStore = create<AudioState>()(
           loopStart: 0,
           loopEnd: file.duration,
           isLooping: false,
-          integratedLufs: isFinite(lufs) ? lufs : null,
+          integratedLufs: null,
           error: null,
         }, undefined, 'audio/setFile')
+        setTimeout(() => {
+          const lufs = computeIntegratedLufs(buffer)
+          set({ integratedLufs: isFinite(lufs) ? lufs : null }, undefined, 'audio/setLufs')
+        }, 0)
       },
 
       clearFile: () => set({

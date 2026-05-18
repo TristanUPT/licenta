@@ -91,15 +91,15 @@ function App() {
 
           <div className="flex items-center gap-3 text-xs sm:gap-5">
             {/* Panel toggles — hidden on small screens */}
-            {currentFile && (
-              <div className="hidden items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:flex">
+            <div className="hidden items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:flex">
+              {currentFile && <>
                 <PanelToggle label={waveLabel}    active={showWaveform}   onClick={toggleWaveform} />
                 <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
                 <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
                 <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
-                <PanelToggle label={synthLabel}   active={showSynthLab}   onClick={toggleSynthLab} />
-              </div>
-            )}
+              </>}
+              <PanelToggle label={synthLabel} active={showSynthLab} onClick={toggleSynthLab} />
+            </div>
 
             {/* Mode toggle */}
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -145,15 +145,15 @@ function App() {
         </div>
 
         {/* Panel toggles on mobile — second row */}
-        {currentFile && (
-          <div className="mt-2 flex items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:hidden">
+        <div className="mt-2 flex items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:hidden">
+          {currentFile && <>
             <PanelToggle label={waveLabel}    active={showWaveform}   onClick={toggleWaveform} />
             <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
             <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
             <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
-            <PanelToggle label={synthLabel}   active={showSynthLab}   onClick={toggleSynthLab} />
-          </div>
-        )}
+          </>}
+          <PanelToggle label={synthLabel} active={showSynthLab} onClick={toggleSynthLab} />
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-8">
@@ -164,15 +164,12 @@ function App() {
             {showEducation  && <InfoPanel />}
             {showEducation  && <RecommendationsPanel />}
             {showLessons    && <LessonsPanel />}
-            {showSynthLab   && <SynthLab />}
-            <EffectsRack />
           </>
         ) : (
-          <>
-            <FileDropZone />
-            {showSynthLab && <SynthLab />}
-          </>
+          <FileDropZone />
         )}
+        {showSynthLab && <SynthLab />}
+        <EffectsRack />
       </main>
 
       <OnboardingTutorial />

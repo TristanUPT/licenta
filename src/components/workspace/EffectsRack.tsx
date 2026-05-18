@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { useEffectsStore } from '@/store/effectsStore'
 import { usePresetStore } from '@/store/presetStore'
+import { useEducationStore } from '@/store/educationStore'
 import { EFFECT_DEFINITIONS, EffectType, type EffectInstance } from '@/types/effects'
 import { getStatus } from '@/audio/engine'
 import { PresetManager } from '@/components/workspace/PresetManager'
@@ -53,6 +54,8 @@ export function EffectsRack() {
   const globalBypass = useEffectsStore((s) => s.globalBypass)
   const setGlobalBypass = useEffectsStore((s) => s.setGlobalBypass)
   const clearActivePreset = usePresetStore((s) => s.setActivePresetId)
+  const language = useEducationStore((s) => s.language)
+  const ro = language === 'ro'
 
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -98,7 +101,9 @@ export function EffectsRack() {
     setError(null)
     try {
       if (getStatus().status !== 'running') {
-        setError('Pornește engine-ul (drag un fișier audio mai întâi).')
+        setError(ro
+          ? 'Pornește engine-ul mai întâi (drag un fișier audio sau pornește Synth Lab).'
+          : 'Start the engine first (drag an audio file or start Synth Lab).')
         return
       }
       addEffect(type)
@@ -109,19 +114,30 @@ export function EffectsRack() {
     }
   }
 
+  const chainLabel  = ro ? 'Lanț de efecte' : 'Effects chain'
+  const addLabel    = ro ? '+ Adaugă efect' : '+ Add effect'
+  const addTitle    = ro ? 'Adaugă efect'   : 'Add effect'
+  const abActive    = ro ? 'A — Procesat'   : 'A — Processed'
+  const abOriginal  = ro ? 'B — Original'   : 'B — Original'
+  const abTitleOn   = ro ? 'Ascultă cu efectele active (A)'  : 'Listen with effects active (A)'
+  const abTitleOff  = ro ? 'Ascultă semnalul original (B)'   : 'Listen to original signal (B)'
+  const emptyLabel  = ro
+    ? 'Niciun efect activ. Adaugă unul pentru a începe să modifici sunetul.'
+    : 'No active effects. Add one to start shaping your sound.'
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            Effects chain
+            {chainLabel}
           </h2>
           <PresetManager />
           {effects.length > 0 && (
             <button
               onClick={() => setGlobalBypass(!globalBypass)}
               aria-pressed={globalBypass}
-              title={globalBypass ? 'Ascultă cu efectele active (A)' : 'Ascultă semnalul original (B)'}
+              title={globalBypass ? abTitleOff : abTitleOn}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
                 globalBypass
                   ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40 hover:bg-amber-500/30'
@@ -129,14 +145,14 @@ export function EffectsRack() {
               }`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${globalBypass ? 'bg-amber-400' : 'bg-zinc-600'}`} />
-              {globalBypass ? 'B — Original' : 'A — Processed'}
+              {globalBypass ? abOriginal : abActive}
             </button>
           )}
         </div>
         <Popover.Root open={open} onOpenChange={setOpen}>
           <Popover.Trigger asChild>
             <button className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-purple-500">
-              + Add effect
+              {addLabel}
             </button>
           </Popover.Trigger>
           <Popover.Portal>
@@ -152,7 +168,7 @@ export function EffectsRack() {
             >
               <div className="shrink-0 border-b border-zinc-800 px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Add effect
+                  {addTitle}
                 </p>
               </div>
               <ul
@@ -184,7 +200,7 @@ export function EffectsRack() {
 
       {effects.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 p-6 text-center text-xs text-zinc-500">
-          Niciun efect activ. Adaugă unul pentru a începe să modifici sunetul.
+          {emptyLabel}
         </div>
       ) : (
         <div className={`space-y-3 transition-opacity duration-200 ${globalBypass ? 'opacity-40' : ''}`}>
