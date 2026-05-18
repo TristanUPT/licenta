@@ -7,6 +7,7 @@
 
 pub mod effects;
 pub mod engine;
+pub mod synth;
 pub mod utils;
 
 pub use engine::{Engine, RENDER_QUANTUM};

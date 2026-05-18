@@ -24,6 +24,10 @@ class DspProcessor extends AudioWorkletProcessor {
     this.meterValsView = null;
     this.localBlockCount = 0;
 
+    // Synth state
+    this.synthPtr = 0;
+    this.synthMode = false;
+
     this.port.onmessage = (event) => this._onMessage(event.data);
     this.port.postMessage({ type: 'hello' });
     console.log('[worklet] processor constructed; sent hello');
@@ -56,6 +60,32 @@ class DspProcessor extends AudioWorkletProcessor {
           break;
         case 'reorder':
           if (this.ready) this._reorder(msg.order);
+          break;
+        case 'synth_create':
+          if (this.ready && this.synthPtr === 0) {
+            this.synthPtr = this.wasm.create_synth(sampleRate);
+            this.synthMode = true;
+            console.log('[worklet] synth created, ptr=', this.synthPtr);
+          }
+          break;
+        case 'synth_destroy':
+          if (this.ready && this.synthPtr !== 0) {
+            this.wasm.destroy_synth(this.synthPtr);
+            this.synthPtr = 0;
+            this.synthMode = false;
+          }
+          break;
+        case 'synth_note_on':
+          if (this.ready && this.synthPtr !== 0)
+            this.wasm.synth_note_on(this.synthPtr, msg.freqHz);
+          break;
+        case 'synth_note_off':
+          if (this.ready && this.synthPtr !== 0)
+            this.wasm.synth_note_off(this.synthPtr);
+          break;
+        case 'synth_set_param':
+          if (this.ready && this.synthPtr !== 0)
+            this.wasm.synth_set_param(this.synthPtr, msg.paramId, msg.value);
           break;
       }
     } catch (err) {
@@ -126,7 +156,10 @@ class DspProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    if (input && input.length > 0 && input[0] && input[0].length > 0) {
+    // Synth mode: fill inputView from Rust synth, ignoring file source.
+    if (this.synthMode && this.synthPtr !== 0) {
+      this.wasm.synth_process(this.synthPtr, this.inputPtr, RENDER_QUANTUM);
+    } else if (input && input.length > 0 && input[0] && input[0].length > 0) {
       const ch0 = input[0];
       if (input.length > 1 && input[1] && input[1].length > 0) {
         const ch1 = input[1];

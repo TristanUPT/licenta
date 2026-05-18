@@ -197,3 +197,25 @@ export function setGlobalBypass(bypassed: boolean): void {
 export function reorderEffects(order: number[]): void {
   postOrThrow({ type: 'reorder', order })
 }
+
+// ─── Synth controls ────────────────────────────────────────────────────────
+
+export function synthCreate(): void {
+  postOrThrow({ type: 'synth_create' })
+}
+
+export function synthDestroy(): void {
+  postOrThrow({ type: 'synth_destroy' })
+}
+
+export function synthNoteOn(freqHz: number): void {
+  postOrThrow({ type: 'synth_note_on', freqHz })
+}
+
+export function synthNoteOff(): void {
+  postOrThrow({ type: 'synth_note_off' })
+}
+
+export function synthSetParam(paramId: number, value: number): void {
+  postOrThrow({ type: 'synth_set_param', paramId, value })
+}

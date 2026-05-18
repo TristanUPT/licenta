@@ -14,6 +14,7 @@ import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
 import { VisualizerPanel } from '@/components/visualization/VisualizerPanel'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
+import { SynthLab } from '@/components/workspace/SynthLab'
 import { InfoPanel } from '@/components/education/InfoPanel'
 import { RecommendationsPanel } from '@/components/education/RecommendationsPanel'
 import { LessonsPanel } from '@/components/education/LessonsPanel'
@@ -63,15 +64,18 @@ function App() {
   const showVisualizer = useUiStore((s) => s.showVisualizer)
   const showEducation  = useUiStore((s) => s.showEducation)
   const showLessons    = useUiStore((s) => s.showLessons)
+  const showSynthLab   = useUiStore((s) => s.showSynthLab)
   const toggleWaveform   = useUiStore((s) => s.toggleWaveform)
   const toggleVisualizer = useUiStore((s) => s.toggleVisualizer)
   const toggleEducation  = useUiStore((s) => s.toggleEducation)
   const toggleLessons    = useUiStore((s) => s.toggleLessons)
+  const toggleSynthLab   = useUiStore((s) => s.toggleSynthLab)
 
   const waveLabel    = language === 'ro' ? 'Waveform' : 'Waveform'
   const vizLabel     = language === 'ro' ? 'Vizualizări' : 'Visualizers'
   const eduLabel     = language === 'ro' ? 'Educație' : 'Education'
   const lessonsLabel = language === 'ro' ? 'Lecții' : 'Lessons'
+  const synthLabel   = language === 'ro' ? 'Synth' : 'Synth'
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
@@ -93,6 +97,7 @@ function App() {
                 <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
                 <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
                 <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
+                <PanelToggle label={synthLabel}   active={showSynthLab}   onClick={toggleSynthLab} />
               </div>
             )}
 
@@ -146,6 +151,7 @@ function App() {
             <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
             <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
             <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
+            <PanelToggle label={synthLabel}   active={showSynthLab}   onClick={toggleSynthLab} />
           </div>
         )}
       </header>
@@ -158,10 +164,14 @@ function App() {
             {showEducation  && <InfoPanel />}
             {showEducation  && <RecommendationsPanel />}
             {showLessons    && <LessonsPanel />}
+            {showSynthLab   && <SynthLab />}
             <EffectsRack />
           </>
         ) : (
-          <FileDropZone />
+          <>
+            <FileDropZone />
+            {showSynthLab && <SynthLab />}
+          </>
         )}
       </main>
 

@@ -11,6 +11,11 @@ export type WorkletInMsg =
   | { type: 'set_bypass'; instanceId: number; bypassed: boolean }
   | { type: 'set_global_bypass'; bypassed: boolean }
   | { type: 'reorder'; order: number[] }
+  | { type: 'synth_create' }
+  | { type: 'synth_destroy' }
+  | { type: 'synth_note_on'; freqHz: number }
+  | { type: 'synth_note_off' }
+  | { type: 'synth_set_param'; paramId: number; value: number }
 
 export type WorkletOutMsg =
   | { type: 'hello' }

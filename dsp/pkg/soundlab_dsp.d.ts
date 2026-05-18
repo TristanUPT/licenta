@@ -7,8 +7,10 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly alloc_f32: (a: number) => number;
     readonly create_engine: (a: number) => number;
+    readonly create_synth: (a: number) => number;
     readonly dealloc_f32: (a: number, b: number) => void;
     readonly destroy_engine: (a: number) => void;
+    readonly destroy_synth: (a: number) => void;
     readonly engine_add_effect: (a: number, b: number, c: number) => number;
     readonly engine_collect_meters: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly engine_remove_effect: (a: number, b: number) => number;
@@ -17,6 +19,10 @@ export interface InitOutput {
     readonly engine_set_param: (a: number, b: number, c: number, d: number) => number;
     readonly get_blocks_processed: (a: number) => bigint;
     readonly process: (a: number, b: number, c: number, d: number) => number;
+    readonly synth_note_off: (a: number) => void;
+    readonly synth_note_on: (a: number, b: number) => void;
+    readonly synth_process: (a: number, b: number, c: number) => void;
+    readonly synth_set_param: (a: number, b: number, c: number) => void;
     readonly dealloc_u32: (a: number, b: number) => void;
     readonly alloc_u32: (a: number) => number;
 }

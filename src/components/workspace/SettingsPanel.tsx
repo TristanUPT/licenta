@@ -30,10 +30,12 @@ export function SettingsPanel() {
   const showVisualizer    = useUiStore((s) => s.showVisualizer)
   const showEducation     = useUiStore((s) => s.showEducation)
   const showLessons       = useUiStore((s) => s.showLessons)
+  const showSynthLab      = useUiStore((s) => s.showSynthLab)
   const toggleVisualizer  = useUiStore((s) => s.toggleVisualizer)
   const toggleEducation   = useUiStore((s) => s.toggleEducation)
   const toggleLessons     = useUiStore((s) => s.toggleLessons)
   const toggleWaveform    = useUiStore((s) => s.toggleWaveform)
+  const toggleSynthLab    = useUiStore((s) => s.toggleSynthLab)
 
   const ro = language === 'ro'
 
@@ -144,10 +146,11 @@ export function SettingsPanel() {
               </p>
               <div className="space-y-1">
                 {[
-                  { label: ro ? 'Waveform' : 'Waveform', active: showWaveform,  toggle: toggleWaveform },
+                  { label: ro ? 'Waveform' : 'Waveform',       active: showWaveform,   toggle: toggleWaveform },
                   { label: ro ? 'Vizualizări' : 'Visualizers', active: showVisualizer, toggle: toggleVisualizer },
-                  { label: ro ? 'Educație' : 'Education',  active: showEducation, toggle: toggleEducation },
-                  { label: ro ? 'Lecții' : 'Lessons',    active: showLessons,   toggle: toggleLessons },
+                  { label: ro ? 'Educație' : 'Education',      active: showEducation,  toggle: toggleEducation },
+                  { label: ro ? 'Lecții' : 'Lessons',          active: showLessons,    toggle: toggleLessons },
+                  { label: ro ? 'Synth Lab' : 'Synth Lab',     active: showSynthLab,   toggle: toggleSynthLab },
                 ].map(({ label, active, toggle }) => (
                   <button
                     key={label}
