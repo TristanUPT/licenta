@@ -104,6 +104,7 @@ export function LevelMeter({ height = 160, width = 28, minDb = -60 }: LevelMeter
       ref={canvasRef}
       className="rounded-md border border-zinc-800"
       aria-label="Output level meter"
+      title="Level meter: cyan = peak · purple = RMS · white = peak hold"
     />
   )
 }

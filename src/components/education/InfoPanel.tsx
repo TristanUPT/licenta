@@ -35,12 +35,15 @@ export function InfoPanel() {
 
   const entries: FeedbackEntry[] = useMemo(() => analyzeAll(stableEffects), [stableEffects])
 
-  if (liveEffects.length === 0) return null
+  const ro = language === 'ro'
+  const heading = ro ? 'Sfaturi efecte' : 'Effect Tips'
 
-  const heading = language === 'ro' ? 'Feedback contextual' : 'Contextual feedback'
-  const emptyText = language === 'ro'
-    ? 'Lanțul curent arată ok — nu sunt observații. Tweak-uiește valorile extreme ca să vezi cum reacționează.'
-    : "The current chain looks fine — no observations. Push some values to extremes to see how it reacts."
+  const noEffectsText = ro
+    ? 'Adaugă efecte în lanț pentru a primi sfaturi în timp real despre parametrii aleși.'
+    : 'Add effects to the chain to receive real-time tips about your parameter choices.'
+  const emptyText = ro
+    ? 'Lanțul curent arată ok — nu sunt observații. Încearcă valori extreme ca să vezi cum reacționează.'
+    : "Current chain looks fine — no observations. Push some values to extremes to see how it reacts."
 
   return (
     <section className="rounded-xl border border-zinc-800 bg-zinc-900/40">
@@ -66,7 +69,11 @@ export function InfoPanel() {
       </button>
       {feedbackVisible && (
         <div className="space-y-2 p-3 pt-0">
-          {entries.length === 0 ? (
+          {liveEffects.length === 0 ? (
+            <p className="rounded-md border border-dashed border-zinc-800 px-3 py-3 text-xs text-zinc-500">
+              {noEffectsText}
+            </p>
+          ) : entries.length === 0 ? (
             <p className="rounded-md border border-dashed border-zinc-800 px-3 py-3 text-xs text-zinc-500">
               {emptyText}
             </p>
@@ -76,7 +83,7 @@ export function InfoPanel() {
               className={`rounded-md border px-3 py-2 text-xs leading-relaxed ${SEVERITY_STYLE[entry.severity]}`}
             >
               <div className="mb-1 flex items-center gap-2">
-                <span className={`rounded-sm px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${SEVERITY_BADGE[entry.severity].cls}`}>
+                <span className={`rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${SEVERITY_BADGE[entry.severity].cls}`}>
                   {SEVERITY_BADGE[entry.severity][language]}
                 </span>
               </div>

@@ -45,7 +45,9 @@ export function FileDropZone() {
       )
     } catch (err) {
       const msg = err instanceof UnsupportedAudioFormatError
-        ? `Format nesuportat: ${file.name}`
+        ? language === 'ro'
+          ? `Format nesuportat: ${file.name}`
+          : `Unsupported format: ${file.name}`
         : err instanceof Error ? err.message : String(err)
       setError(msg)
     } finally {

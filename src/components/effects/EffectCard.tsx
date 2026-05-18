@@ -69,18 +69,23 @@ export function EffectCard({ instance, children }: EffectCardProps) {
           <button
             onClick={() => setBypass(instance.id, !instance.bypassed)}
             aria-pressed={instance.bypassed}
-            title={instance.bypassed ? 'Re-enable effect' : 'Bypass'}
-            className={`rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition ${
+            title={instance.bypassed
+              ? (language === 'ro' ? 'Reactivează efectul' : 'Re-enable effect')
+              : (language === 'ro' ? 'Bypass (dezactivează temporar)' : 'Bypass (temporarily disable)')}
+            className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition ${
               instance.bypassed
                 ? 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'
                 : 'bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30'
             }`}
           >
-            {instance.bypassed ? 'off' : 'on'}
+            <span className={`h-1.5 w-1.5 rounded-full ${instance.bypassed ? 'bg-zinc-600' : 'bg-emerald-400'}`} />
+            {instance.bypassed
+              ? (language === 'ro' ? 'oprit' : 'off')
+              : (language === 'ro' ? 'activ' : 'on')}
           </button>
           <button
             onClick={() => removeEffect(instance.id)}
-            title="Remove effect"
+            title={language === 'ro' ? 'Șterge efectul (Ctrl+Z pentru undo)' : 'Remove effect (Ctrl+Z to undo)'}
             className="rounded-md px-2 py-1 text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
           >
             ✕

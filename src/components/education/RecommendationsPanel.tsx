@@ -114,11 +114,15 @@ export function RecommendationsPanel() {
 
   if (effects.length === 0) return null
 
-  const heading   = language === 'ro' ? 'Recomandări' : 'Recommendations'
-  const emptyText = language === 'ro'
-    ? 'Nicio recomandare pentru configurația curentă. Semnalul sună bine!'
-    : 'No recommendations for the current configuration. The signal sounds good!'
-  const addLabel  = language === 'ro' ? 'Adaugă' : 'Add'
+  const ro = language === 'ro'
+  const heading   = ro ? 'Sugestii semnal' : 'Signal Suggestions'
+  const emptyText = ro
+    ? 'Nicio sugestie pentru configurația curentă — semnalul sună bine!'
+    : 'No suggestions for the current configuration — signal sounds good!'
+  const addLabel  = ro ? 'Adaugă' : 'Add'
+  const analysisNote = ro
+    ? 'Analiză actualizată la ~3 s · bazată pe spectru și dinamică'
+    : 'Analysis updated every ~3 s · based on spectrum and dynamics'
 
   function handleAdd(rec: Recommendation) {
     if (rec.effectType === undefined) return
@@ -175,13 +179,13 @@ export function RecommendationsPanel() {
                 className={`rounded-md border px-3 py-2 text-xs leading-relaxed ${SEV_STYLE[rec.severity]}`}
               >
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className={`rounded-sm px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${SEV_BADGE[rec.severity].cls}`}>
+                  <span className={`rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${SEV_BADGE[rec.severity].cls}`}>
                     {SEV_BADGE[rec.severity][language]}
                   </span>
                   {rec.effectType !== undefined && (
                     <button
                       onClick={() => handleAdd(rec)}
-                      className="rounded px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider bg-purple-600/20 text-purple-300 transition hover:bg-purple-600/40"
+                      className="rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-purple-600/20 text-purple-300 transition hover:bg-purple-600/40"
                     >
                       + {addLabel}
                     </button>
@@ -191,6 +195,7 @@ export function RecommendationsPanel() {
               </div>
             ))
           )}
+          <p className="pt-1 text-[10px] text-zinc-700">{analysisNote}</p>
         </div>
       )}
     </section>
