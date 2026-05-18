@@ -41,8 +41,8 @@ const STEPS: Step[] = [
     icon: '🎚️',
     title: { ro: 'Adaugă efecte DSP', en: 'Add DSP effects' },
     body: {
-      ro: 'Apasă "+ Add effect" din secțiunea Effects Chain și alege un efect. Poți adăuga oricâte efecte și le poți reordona prin drag & drop de pe simbolul ⠿.',
-      en: 'Click "+ Add effect" in the Effects Chain section and choose an effect. You can add as many as you like and reorder them by dragging the ⠿ handle.',
+      ro: 'Apasă "+ Adaugă efect" din secțiunea Lanț de efecte și alege un efect. Poți adăuga oricâte efecte și le poți reordona prin drag & drop de pe simbolul ⠿. Ctrl+Z anulează orice modificare.',
+      en: 'Click "+ Add effect" in the Effects Chain section and choose an effect. You can add as many as you like and reorder them by dragging the ⠿ handle. Ctrl+Z undoes any change.',
     },
     tip: {
       ro: 'Fiecare knob are un tooltip educațional — ține mouse-ul deasupra lui.',
@@ -65,8 +65,8 @@ const STEPS: Step[] = [
     icon: '📊',
     title: { ro: 'Vizualizări și feedback', en: 'Visualizations & feedback' },
     body: {
-      ro: 'Panoul de vizualizări arată spectrul și spectrograma în timp real. Secțiunea "Feedback contextual" analizează lanțul tău de efecte și oferă sugestii bazate pe valorile parametrilor.',
-      en: 'The visualizer panel shows the spectrum and spectrogram in real-time. The "Contextual feedback" section analyzes your effect chain and offers parameter-based suggestions.',
+      ro: 'Panoul de vizualizări arată spectrul și spectrograma în timp real. Secțiunea "Sfaturi efecte" analizează lanțul tău de efecte și oferă observații bazate pe valorile parametrilor. "Sugestii semnal" îți propune efecte noi bazat pe analiza spectrală.',
+      en: 'The visualizer panel shows the spectrum and spectrogram in real-time. The "Effect Tips" section analyzes your effect chain and offers parameter-based observations. "Signal Suggestions" recommends new effects based on spectral analysis.',
     },
     tip: {
       ro: 'Comută între modul Beginner și Advanced în header pentru explicații tehnice.',
@@ -97,6 +97,22 @@ export function OnboardingTutorial() {
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) setOpen(true)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        localStorage.setItem(STORAGE_KEY, '1')
+        setOpen(false)
+      } else if (e.key === 'ArrowRight') {
+        setStep((s) => (s < STEPS.length - 1 ? s + 1 : s))
+      } else if (e.key === 'ArrowLeft') {
+        setStep((s) => (s > 0 ? s - 1 : 0))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   function finish() {
     localStorage.setItem(STORAGE_KEY, '1')
@@ -157,7 +173,7 @@ export function OnboardingTutorial() {
           </div>
           <button
             onClick={finish}
-            className="text-xs text-zinc-600 transition hover:text-zinc-400"
+            className="rounded px-2 py-0.5 text-xs text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
           >
             {skipLabel}
           </button>

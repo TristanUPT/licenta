@@ -53,6 +53,7 @@ export function EffectsRack() {
   const reorder = useEffectsStore((s) => s.reorder)
   const globalBypass = useEffectsStore((s) => s.globalBypass)
   const setGlobalBypass = useEffectsStore((s) => s.setGlobalBypass)
+  const canUndo = useEffectsStore((s) => s.canUndo)
   const clearActivePreset = usePresetStore((s) => s.setActivePresetId)
   const language = useEducationStore((s) => s.language)
   const ro = language === 'ro'
@@ -129,9 +130,16 @@ export function EffectsRack() {
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            {chainLabel}
-          </h2>
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              {chainLabel}
+            </h2>
+            {canUndo() && (
+              <span className="text-[10px] text-zinc-600" title={ro ? 'Ctrl+Z pentru undo' : 'Ctrl+Z to undo'}>
+                Ctrl+Z
+              </span>
+            )}
+          </div>
           <PresetManager />
           {effects.length > 0 && (
             <button

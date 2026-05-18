@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useEducationStore } from '@/store/educationStore'
+import { useEffectsStore } from '@/store/effectsStore'
+import { usePresetStore } from '@/store/presetStore'
+import { FACTORY_PRESETS } from '@/presets/factoryPresets'
+import { getStatus } from '@/audio/engine'
 
 interface LessonContent {
   title: { ro: string; en: string }
   icon: string
+  /** ID of the factory preset that best illustrates this lesson. */
+  presetId?: string
   body: {
     ro: { beginner: string; advanced: string }
     en: { beginner: string; advanced: string }
@@ -17,6 +23,7 @@ interface LessonContent {
 const LESSONS: LessonContent[] = [
   {
     icon: '⛓️',
+    presetId: 'factory:vocal-cleanup',
     title: { ro: 'Ordinea Efectelor', en: 'Signal Chain Order' },
     body: {
       ro: {
@@ -39,6 +46,7 @@ const LESSONS: LessonContent[] = [
   },
   {
     icon: '📊',
+    presetId: 'factory:drum-punch',
     title: { ro: 'Compresie și Dinamică', en: 'Compression & Dynamics' },
     body: {
       ro: {
@@ -61,6 +69,7 @@ const LESSONS: LessonContent[] = [
   },
   {
     icon: '🎛️',
+    presetId: 'factory:acoustic-guitar',
     title: { ro: 'Egalizarea (EQ)', en: 'Equalisation (EQ)' },
     body: {
       ro: {
@@ -83,6 +92,7 @@ const LESSONS: LessonContent[] = [
   },
   {
     icon: '🏛️',
+    presetId: 'factory:vintage-warmth',
     title: { ro: 'Reverb și Delay', en: 'Reverb & Delay' },
     body: {
       ro: {
@@ -105,6 +115,7 @@ const LESSONS: LessonContent[] = [
   },
   {
     icon: '🎚️',
+    presetId: 'factory:mastering',
     title: { ro: 'Mastering: Lanțul Final', en: 'Mastering: The Final Chain' },
     body: {
       ro: {
@@ -127,6 +138,7 @@ const LESSONS: LessonContent[] = [
   },
   {
     icon: '🌊',
+    presetId: 'factory:lo-fi',
     title: { ro: 'Efecte de Modulare', en: 'Modulation Effects' },
     body: {
       ro: {
@@ -149,6 +161,7 @@ const LESSONS: LessonContent[] = [
   },
   {
     icon: '🎸',
+    presetId: 'factory:vintage-warmth',
     title: { ro: 'Pitch, Timp & Saturare', en: 'Pitch, Time & Saturation' },
     body: {
       ro: {
@@ -176,7 +189,13 @@ export function LessonsPanel() {
   const mode              = useEducationStore((s) => s.mode)
   const completedLessons  = useEducationStore((s) => s.completedLessons)
   const markComplete      = useEducationStore((s) => s.markLessonComplete)
+  const addEffect         = useEffectsStore((s) => s.addEffect)
+  const setParam          = useEffectsStore((s) => s.setParam)
+  const setBypass         = useEffectsStore((s) => s.setBypass)
+  const clearChain        = useEffectsStore((s) => s.clear)
+  const setActivePreset   = usePresetStore((s) => s.setActivePresetId)
   const [active, setActive] = useState(0)
+  const [presetError, setPresetError] = useState<string | null>(null)
 
   // Auto-mark a lesson as read after viewing it for 2 seconds
   useEffect(() => {
@@ -186,12 +205,37 @@ export function LessonsPanel() {
 
   const lesson = LESSONS[active]!
 
-  const titleLabel  = language === 'ro' ? 'Lecții de audio' : 'Audio lessons'
-  const pointsLabel = language === 'ro' ? 'Puncte cheie' : 'Key points'
+  const ro = language === 'ro'
+  const titleLabel  = ro ? 'Lecții de audio' : 'Audio lessons'
+  const pointsLabel = ro ? 'Puncte cheie' : 'Key points'
   const doneCount   = completedLessons.length
-  const progressLabel = language === 'ro'
+  const progressLabel = ro
     ? `${doneCount} din ${LESSONS.length} parcurse`
     : `${doneCount} of ${LESSONS.length} completed`
+  const tryLabel    = ro ? 'Încarcă preset exemplu' : 'Load example preset'
+  const tryErrorMsg = ro
+    ? 'Pornește engine-ul mai întâi (drag un fișier audio sau Synth Lab).'
+    : 'Start the engine first (drag an audio file or use Synth Lab).'
+
+  function handleLoadPreset() {
+    if (!lesson.presetId) return
+    setPresetError(null)
+    if (getStatus().status !== 'running') {
+      setPresetError(tryErrorMsg)
+      return
+    }
+    const preset = FACTORY_PRESETS.find((p) => p.id === lesson.presetId)
+    if (!preset) return
+    clearChain()
+    for (const pe of preset.effects) {
+      const instance = addEffect(pe.type)
+      for (const [rawId, value] of Object.entries(pe.params)) {
+        setParam(instance.id, Number(rawId), value)
+      }
+      if (pe.bypassed) setBypass(instance.id, true)
+    }
+    setActivePreset(preset.id)
+  }
 
   return (
     <section className="space-y-3">
@@ -211,12 +255,12 @@ export function LessonsPanel() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
         {LESSONS.map((l, i) => (
           <button
             key={i}
             onClick={() => setActive(i)}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition ${
+            className={`shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition ${
               active === i
                 ? 'bg-purple-600/30 text-purple-200 ring-1 ring-purple-500/40'
                 : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
@@ -233,12 +277,28 @@ export function LessonsPanel() {
 
       {/* Lesson content */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{lesson.icon}</span>
-          <h3 className="text-base font-semibold text-zinc-100">
-            {lesson.title[language]}
-          </h3>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{lesson.icon}</span>
+            <h3 className="text-base font-semibold text-zinc-100">
+              {lesson.title[language]}
+            </h3>
+          </div>
+          {lesson.presetId && (
+            <button
+              onClick={handleLoadPreset}
+              title={tryLabel}
+              className="shrink-0 rounded-md border border-purple-500/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-purple-400 transition hover:border-purple-500/60 hover:bg-purple-500/10 hover:text-purple-300"
+            >
+              {tryLabel}
+            </button>
+          )}
         </div>
+        {presetError && (
+          <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-300">
+            {presetError}
+          </p>
+        )}
 
         <p className="text-sm leading-relaxed text-zinc-400">
           {lesson.body[language][mode]}

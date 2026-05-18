@@ -181,10 +181,15 @@ export function TransportBar() {
         )}
       </div>
 
-      {/* Row 2 (mobile only): filename + export */}
+      {/* Row 2 (mobile only): filename + LUFS + export */}
       {currentFile && (
         <div className="mt-2 flex items-center gap-2 sm:hidden">
           <FileInfo currentFile={currentFile} />
+          {integratedLufs !== null && (
+            <span className={`shrink-0 font-mono text-[10px] tabular-nums ${integratedLufs > -14 ? 'text-amber-300' : integratedLufs > -23 ? 'text-emerald-400' : 'text-zinc-500'}`}>
+              {integratedLufs.toFixed(1)} LUFS
+            </span>
+          )}
           <ExportButton exporting={exporting} disabled={effects.length === 0} onExport={() => void handleExport()} />
           <button
             onClick={() => { transport.stop(); clearFile() }}
