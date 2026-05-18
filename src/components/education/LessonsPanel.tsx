@@ -104,6 +104,28 @@ const LESSONS: LessonContent[] = [
     },
   },
   {
+    icon: '🎚️',
+    title: { ro: 'Mastering: Lanțul Final', en: 'Mastering: The Final Chain' },
+    body: {
+      ro: {
+        beginner:
+          'Masteringul este ultimul pas înainte ca muzica să ajungă la public — "lipiciul" care face ca un mix să sune bine pe orice sistem audio. Nu schimbi dramatic sunetul; corectezi subtil, uniformizezi și optimizezi nivelul. Un lanț tipic de mastering: EQ dinamic (corectează probleme) → Compressor ușor (glue) → Limiter (maximizare volum). Scopul: sunet consistent, care ajunge la nivelul de referință al platformei (ex: Spotify –14 LUFS).',
+        advanced:
+          'Mastering chain arhitectural: EQ corectiv (tăieri chirurgicale, max ±3 dB) → EQ creativ (shelving cald) → Compressor (2:1–4:1, attack lent 30–80 ms, GR 2–4 dB, New York parallel mix 50–80%) → Saturation subtilă (tape, 1–2 dB drive, adaugă armonice pare → distorsiune armonică plăcută, crește perceived loudness) → Limiter (true-peak limiting la –1 dBTP pentru streaming, attack ≤1 ms, inter-sample peak protection). LUFS: Spotify –14, Apple Music –16, YouTube –14 integrated LUFS. Diferența fastaudio vs broadcast: broadcast normalizează la –23 LUFS (EBU R128).',
+      },
+      en: {
+        beginner:
+          'Mastering is the last step before music reaches the public — the "glue" that makes a mix sound good on any audio system. You don\'t dramatically change the sound; you subtly correct, balance, and optimise the level. A typical mastering chain: dynamic EQ (fix problems) → light Compressor (glue) → Limiter (loudness maximisation). Goal: consistent sound reaching the platform\'s reference level (e.g. Spotify −14 LUFS).',
+        advanced:
+          'Mastering chain architecture: corrective EQ (surgical cuts, max ±3 dB) → creative EQ (warm shelving) → Compressor (2:1–4:1, slow attack 30–80 ms, GR 2–4 dB, New York parallel mix 50–80%) → subtle Saturation (tape, 1–2 dB drive, adds even harmonics → pleasant harmonic distortion, increases perceived loudness) → Limiter (true-peak limiting at −1 dBTP for streaming, attack ≤1 ms, inter-sample peak protection). LUFS targets: Spotify −14, Apple Music −16, YouTube −14 integrated LUFS. Difference fast audio vs broadcast: broadcast normalises to −23 LUFS (EBU R128).',
+      },
+    },
+    keyPoints: {
+      ro: ['Modificări subtile (max ±3 dB)', 'EQ → Compressor → Limiter', 'Parallel compression pentru "glue"', 'Limiter la –1 dBTP pentru streaming', 'LUFS = standard de volum perceput'],
+      en: ['Subtle changes (max ±3 dB)', 'EQ → Compressor → Limiter', 'Parallel compression for glue', 'Limiter at –1 dBTP for streaming', 'LUFS = perceived loudness standard'],
+    },
+  },
+  {
     icon: '🌊',
     title: { ro: 'Efecte de Modulare', en: 'Modulation Effects' },
     body: {
@@ -123,6 +145,28 @@ const LESSONS: LessonContent[] = [
     keyPoints: {
       ro: ['LFO Rate = viteza modulației', 'Depth = intensitatea efectului', 'Feedback adâncește efectul', 'Chorus = mai multe voci', 'Phaser ≠ Flanger: baza e all-pass, nu delay'],
       en: ['LFO Rate = modulation speed', 'Depth = effect intensity', 'Feedback deepens the effect', 'Chorus = multiple voices', 'Phaser ≠ Flanger: based on all-pass, not delay'],
+    },
+  },
+  {
+    icon: '🎸',
+    title: { ro: 'Pitch, Timp & Saturare', en: 'Pitch, Time & Saturation' },
+    body: {
+      ro: {
+        beginner:
+          'Pitch Shift modifică înălțimea unui sunet fără a schimba viteza — util pentru a transpune o voce sau un instrument în altă tonalitate. Saturarea "murdărește" sunetul intenționat, adăugând armonice calde — ca un amplificator de chitară împins la limită. Există trei tipuri: Tube (armonice pare, sunet cald), Tape (compresie și distorsie moale), Clip (distorsie digitală tăioasă). Fiecare tip de saturare are un caracter diferit și se folosește în contexte diferite.',
+        advanced:
+          'Pitch Shifting algoritm (Rubato/WSOLA): segmente de semnal (grains) sunt rearanjate/suprapuse cu overlap-add pentru a schimba tonalitatea fără a afecta tempo-ul — artefacte audibile la intervale mari (>±12 semitoane) din cauza limitelor coherenței de fază. Saturare: Tube = waveshaper cu caracteristică tanh (f(x) = tanh(gain·x)/tanh(gain)) — asimetric, produce f2, f4; Tape = hard clipper + LPF + ușoară compresie → caracterul "warmth" al ferrofluidului magnetizat; Clip (Hard) = max(−1, min(1, x·gain)) → spectre de armonice impare (f3, f5, f7) — distorsie "gritty". Regula: Tube pentru voce/mix-bus, Tape pentru instrumente percutante, Clip pentru efecte agresive.',
+      },
+      en: {
+        beginner:
+          'Pitch Shift changes the pitch of a sound without changing its speed — useful for transposing a voice or instrument to another key. Saturation intentionally "dirtifies" the sound, adding warm harmonics — like a guitar amplifier pushed to its limits. There are three types: Tube (even harmonics, warm sound), Tape (soft compression and distortion), Clip (sharp digital distortion). Each type has a different character and is used in different contexts.',
+        advanced:
+          'Pitch Shifting algorithm (Rubato/WSOLA): signal segments (grains) are rearranged/overlapped with overlap-add to change pitch without affecting tempo — audible artefacts at large intervals (>±12 semitones) due to phase coherence limits. Saturation: Tube = tanh waveshaper (f(x) = tanh(gain·x)/tanh(gain)) — asymmetric, produces f2, f4; Tape = hard clipper + LPF + slight compression → warmth character of magnetised ferrofluid; Clip (Hard) = max(−1, min(1, x·gain)) → odd harmonic spectrum (f3, f5, f7) — "gritty" distortion. Rule: Tube for voice/mix-bus, Tape for percussive instruments, Clip for aggressive effects.',
+      },
+    },
+    keyPoints: {
+      ro: ['Pitch Shift: transpose fără schimbare tempo', 'Tube = armonice pare (cald)', 'Tape = compresie + cald (organică)', 'Clip = armonice impare (agresiv)', 'Saturare < 5% = warmth; > 20% = distorsie'],
+      en: ['Pitch Shift: transpose without tempo change', 'Tube = even harmonics (warm)', 'Tape = compression + warm (organic)', 'Clip = odd harmonics (aggressive)', 'Saturation < 5% = warmth; > 20% = distortion'],
     },
   },
 ]

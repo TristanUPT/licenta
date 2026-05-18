@@ -4,6 +4,7 @@ import { useEffectsStore } from '@/store/effectsStore'
 import { usePresetStore } from '@/store/presetStore'
 import { useEducationStore } from '@/store/educationStore'
 import { FACTORY_PRESETS, type Preset } from '@/presets/factoryPresets'
+import { putUserPreset } from '@/audio/db'
 import { getStatus } from '@/audio/engine'
 import type { EducationLanguage, EducationMode } from '@/store/educationStore'
 
@@ -25,6 +26,7 @@ export function PresetManager() {
   const [saving, setSaving]     = useState(false)
   const [saveName, setSaveName] = useState('')
   const nameInputRef            = useRef<HTMLInputElement>(null)
+  const importInputRef          = useRef<HTMLInputElement>(null)
 
   const mode = useEducationStore((s) => s.mode)
 
@@ -80,6 +82,59 @@ export function PresetManager() {
     }
   }
 
+  function handleExportChain() {
+    if (effects.length === 0) return
+    const preset: Preset = {
+      id: `export:${Date.now()}`,
+      category: 'user',
+      name: { ro: activePreset?.name.ro ?? 'Export', en: activePreset?.name.en ?? 'Export' },
+      description: { ro: '', en: '' },
+      effects: effects.map((e) => ({ type: e.type, bypassed: e.bypassed, params: { ...e.params } })),
+    }
+    const json = JSON.stringify(preset, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `${(preset.name.en).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.soundlab.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setError(null)
+    try {
+      const text = await file.text()
+      const raw = JSON.parse(text) as Record<string, unknown>
+      if (!Array.isArray(raw['effects'])) throw new Error('Invalid preset file.')
+      const imported: Preset = {
+        id: `user:${Date.now()}`,
+        category: 'user',
+        name: typeof raw['name'] === 'object' && raw['name'] !== null
+          ? raw['name'] as { ro: string; en: string }
+          : { ro: file.name.replace(/\.soundlab\.json$/, ''), en: file.name.replace(/\.soundlab\.json$/, '') },
+        description: { ro: '', en: '' },
+        effects: (raw['effects'] as Preset['effects']).map((ef) => ({
+          type: ef.type,
+          bypassed: ef.bypassed ?? false,
+          params: ef.params ?? {},
+        })),
+      }
+      await putUserPreset(imported)
+      setActivePreset(imported.id)
+      // Force reload from DB so the UI reflects the import.
+      const { loadUserPresetsFromDB } = usePresetStore.getState()
+      await loadUserPresetsFromDB()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed.')
+    }
+  }
+
+  const exportLabel  = language === 'ro' ? 'Exportă chain' : 'Export chain'
+  const importLabel  = language === 'ro' ? 'Importă preset' : 'Import preset'
   const triggerLabel = language === 'ro' ? 'Preseturi' : 'Presets'
   const activeLabel  = activePreset?.name[language]
 
@@ -172,6 +227,38 @@ export function PresetManager() {
                 ))
               )}
             </ul>
+          </div>
+
+          {/* ── Export / Import ── */}
+          <div className="shrink-0 flex items-center gap-1.5 border-t border-zinc-800 px-2 py-2">
+            <button
+              onClick={handleExportChain}
+              disabled={effects.length === 0}
+              title={exportLabel}
+              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-zinc-700 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition hover:border-purple-500/50 hover:text-purple-300 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {exportLabel}
+            </button>
+            <button
+              onClick={() => importInputRef.current?.click()}
+              title={importLabel}
+              className="flex flex-1 items-center justify-center gap-1 rounded-md border border-zinc-700 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition hover:border-purple-500/50 hover:text-purple-300"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+              {importLabel}
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json,.soundlab.json"
+              className="hidden"
+              onChange={(e) => void handleImportFile(e)}
+            />
           </div>
 
           {/* ── Save current chain ── */}

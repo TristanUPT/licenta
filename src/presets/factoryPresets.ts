@@ -268,4 +268,144 @@ export const FACTORY_PRESETS: Preset[] = [
       },
     ],
   },
+
+  // ── 6. Acoustic Guitar ─────────────────────────────────────────────────
+  {
+    id: 'factory:acoustic-guitar',
+    name: { ro: 'Chitară Acustică', en: 'Acoustic Guitar' },
+    description: {
+      ro: 'HPF 80 Hz → EQ (mud cut + body + air) → Compressor ușor → Reverb de cameră.',
+      en: 'HPF 80 Hz → EQ (mud cut + body + air) → light Compressor → room Reverb.',
+    },
+    rationale: {
+      ro: {
+        beginner:
+          'Chitara acustică are o gamă de frecvențe foarte largă — de la sub-bas la armonice înalte. HPF 80 Hz taie rumenblul microfonului și zgomotul de podea. EQ-ul scoate "noroiul" de la 200 Hz (specific microfoanelor directionate aproape de cutia de rezonanță), adaugă corp la 120 Hz și prezență la 5 kHz. Compresorul ușor (ratio 2:1) uniformizează atacurile de pana fără a ucide dinamica. Reverb mic simulează sala de concert.',
+        advanced:
+          'Low Cut 80 Hz (12 dB/oct) — pantă mai blândă față de voce pentru a nu afecta "thump"-ul chitarei. Bell –3 dB @ 200 Hz (Q=2.5) atenuează boxiness-ul cutiei de rezonanță (proximity effect dacă microfonul e aproape de soundhole). Bell +2 dB @ 120 Hz (Q=1) → fundamentalele coardelor D și A (+1 octavă) — adaugă warmth. Bell +2.5 dB @ 5 kHz (Q=2) → "sparkle" — armonicele plectrumului/unghiei. Compressor 2:1, attack 20 ms (lasă pick transient), release 80 ms. Reverb (Schroeder) SIZE=0.35, DAMPING=0.4 → cameră live, nu hall.',
+      },
+      en: {
+        beginner:
+          'Acoustic guitar has a very wide frequency range — from sub-bass to high harmonics. HPF 80 Hz removes mic rumble and floor noise. The EQ removes "mud" at 200 Hz (typical when mic is close to the soundhole), adds body at 120 Hz and presence at 5 kHz. The light compressor (2:1) evens out pick attacks without killing dynamics. Small reverb simulates a concert room.',
+        advanced:
+          'Low Cut 80 Hz (12 dB/oct) — gentler slope than vocals to preserve the guitar "thump". Bell –3 dB @ 200 Hz (Q=2.5) attenuates resonance box boxiness (proximity effect when mic is near soundhole). Bell +2 dB @ 120 Hz (Q=1) → D and A string fundamentals (+1 octave) — adds warmth. Bell +2.5 dB @ 5 kHz (Q=2) → "sparkle" — plectrum/nail harmonics. Compressor 2:1, attack 20 ms (passes pick transient), release 80 ms. Reverb (Schroeder) SIZE=0.35, DAMPING=0.4 → live room, not hall.',
+      },
+    },
+    effects: [
+      {
+        type: EffectType.ParametricEq,
+        params: {
+          ...eqLowCut(80, 1),
+          ...eqBand(0, 0,  120,   2,   1),
+          ...eqBand(1, 0,  200,  -3,   2.5),
+          ...eqBand(2, 0, 5000,   2.5, 2),
+          ...eqBand(3, 2, 12000,  1.5, 1),
+        },
+      },
+      {
+        type: EffectType.Compressor,
+        params: { 0: -18, 1: 2, 2: 20, 3: 80, 4: 4, 5: 3, 6: 60, 7: 1 },
+      },
+      {
+        type: EffectType.Reverb,
+        params: { 0: 0.35, 1: 0.4, 2: 15, 3: 0.18 },
+      },
+    ],
+  },
+
+  // ── 7. Lo-Fi / Vinyl ───────────────────────────────────────────────────
+  {
+    id: 'factory:lo-fi',
+    name: { ro: 'Lo-Fi / Vinil', en: 'Lo-Fi / Vinyl' },
+    description: {
+      ro: 'Saturation → EQ (bandpass 150–8 kHz) → Chorus fin → Reverb warm.',
+      en: 'Saturation → bandpass EQ (150–8 kHz) → subtle Chorus → warm Reverb.',
+    },
+    rationale: {
+      ro: {
+        beginner:
+          'Sunetul lo-fi imită un vinil sau o casetă veche — are mai puțin sub-bas și înalte clare, mai multă "murdar". Saturarea adaugă armonice calde. EQ-ul limitează banda la 150 Hz–8 kHz, ca un difuzor mic sau un vinil. Chorus-ul fin simulează ușoarele variații de viteză ale unui girofar. Reverb-ul cald adaugă ambiența unui studio vechi.',
+        advanced:
+          'Lo-fi chain: Saturation TAPE (TYPE=1), DRIVE=4, TONE=8 kHz — waveshaper cu clipper moale asimetric + LPF, imitând banda de caseta cu saturare la niveluri medii. EQ: HPF 150 Hz (24 dB/oct) taie sub-bass-ul absent pe vinil (canalul de modulator are răspuns HPF la bass); HiShelf –6 dB @ 8 kHz (Q=0.7) taie frecvențele înalte absente din calitatea vinil/casetă. Chorus (RATE=0.3 Hz, DEPTH=0.4) simulează wow & flutter (variații de viteză sub 4 Hz). Reverb warm (SIZE=0.55, DAMPING=0.8) → "room sound" al unui studio mic din anii \'70.',
+      },
+      en: {
+        beginner:
+          'Lo-fi sound mimics a vinyl record or old cassette — less sub-bass and crisp highs, more "dirt". Saturation adds warm harmonics. EQ limits the band to 150 Hz–8 kHz, like a small speaker or vinyl. Subtle Chorus simulates the slight speed variations of a turntable. Warm reverb adds the ambience of an old studio.',
+        advanced:
+          'Lo-fi chain: Saturation TAPE (TYPE=1), DRIVE=4, TONE=8 kHz — soft asymmetric clipper waveshaper + LPF, mimicking cassette tape saturation at medium levels. EQ: HPF 150 Hz (24 dB/oct) removes sub-bass absent on vinyl (the cutter head has HPF bass response); HiShelf –6 dB @ 8 kHz (Q=0.7) removes high frequencies absent from vinyl/cassette quality. Chorus (RATE=0.3 Hz, DEPTH=0.4) simulates wow & flutter (speed variations below 4 Hz). Warm reverb (SIZE=0.55, DAMPING=0.8) → room sound of a small 1970s studio.',
+      },
+    },
+    effects: [
+      {
+        type: EffectType.Saturation,
+        params: { 0: 4, 1: 1, 2: 8000, 3: 0.85 },
+      },
+      {
+        type: EffectType.ParametricEq,
+        params: {
+          ...eqLowCut(150, 2),
+          ...eqBand(0, 1,  300,  1.5, 0.8),
+          ...eqBand(3, 2, 8000, -6,   0.7),
+        },
+      },
+      {
+        type: EffectType.Chorus,
+        params: { 0: 0.3, 1: 0.4, 2: 12, 3: 0.2, 4: 0.5 },
+      },
+      {
+        type: EffectType.Reverb,
+        params: { 0: 0.55, 1: 0.8, 2: 20, 3: 0.2 },
+      },
+    ],
+  },
+
+  // ── 8. De-Essing & Breath Control ──────────────────────────────────────
+  {
+    id: 'factory:voice-advanced',
+    name: { ro: 'Voce Avansată (De-ess)', en: 'Advanced Voice (De-ess)' },
+    description: {
+      ro: 'Gate → EQ → Compressor → De-esser → Limiter. Lanț complet pentru voce cu sibilanță.',
+      en: 'Gate → EQ → Compressor → De-esser → Limiter. Full chain for voice with sibilance.',
+    },
+    rationale: {
+      ro: {
+        beginner:
+          'Unele voci au un "s" sau "ș" prea ascuțit — se numește sibilanță. De-esser-ul este un compressor special care lucrează doar pe frecvențele înalte (6–8 kHz) unde se găsesc sibilantele. Îl punem după compresorul principal pentru că compresorul poate amplifica sibilantele prin makeup gain. Ordinea corectă: Gate (zgomot) → EQ (modelare) → Compressor (dinamică) → De-esser (sibilante) → Limiter (protecție).',
+        advanced:
+          'De-esser post-compressor este arhitectura standard: compresorul cu makeup gain crește nivelul mediu, amplificând implicit sibilantele care oricum sunt mai sus în spectru. De-esser-ul (sidechain HPF @ 6 kHz, Q=0.7) detectează energia de înaltă frecvență independent și aplică reducere de gain selectivă. THRESHOLD –22 dB, RATIO 4:1, RELEASE 50 ms — răspuns rapid pentru a prinde tranzienetele de sibilanță (< 30 ms) fără a afecta vocalele. Avantaj față de EQ static: nu atenuează permanent 8 kHz — atenuează NUMAI când apare sibilanță.',
+      },
+      en: {
+        beginner:
+          'Some voices have a too-sharp "s" or "sh" — this is called sibilance. The de-esser is a special compressor that works only on the high frequencies (6–8 kHz) where sibilants live. We place it after the main compressor because the compressor can amplify sibilants through makeup gain. Correct order: Gate (noise) → EQ (shaping) → Compressor (dynamics) → De-esser (sibilance) → Limiter (protection).',
+        advanced:
+          'De-esser post-compressor is the standard architecture: the compressor with makeup gain raises average level, implicitly amplifying sibilants which are already higher in the spectrum. The de-esser (sidechain HPF @ 6 kHz, Q=0.7) independently detects high-frequency energy and applies selective gain reduction. THRESHOLD −22 dB, RATIO 4:1, RELEASE 50 ms — fast response to catch sibilant transients (< 30 ms) without affecting vowels. Advantage over static EQ: does not permanently attenuate 8 kHz — attenuates ONLY when sibilance occurs.',
+      },
+    },
+    effects: [
+      {
+        type: EffectType.Gate,
+        params: { 0: -50, 1: 2, 2: 20, 3: 100, 4: -60, 5: 4, 6: 1 },
+      },
+      {
+        type: EffectType.ParametricEq,
+        params: {
+          ...eqLowCut(80, 2),
+          ...eqBand(1, 0, 300,   -3,  2),
+          ...eqBand(2, 0, 3000,   2,  1.5),
+        },
+      },
+      {
+        type: EffectType.Compressor,
+        params: { 0: -22, 1: 3, 2: 10, 3: 120, 4: 6, 5: 6, 6: 80, 7: 1 },
+      },
+      {
+        type: EffectType.DeEsser,
+        params: { 0: -22, 1: 4, 2: 6000, 3: 50, 4: 0, 5: 1 },
+      },
+      {
+        type: EffectType.Limiter,
+        params: { 0: -1, 1: 50, 2: 1 },
+      },
+    ],
+  },
 ]
