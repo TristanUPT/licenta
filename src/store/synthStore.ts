@@ -33,6 +33,22 @@ export const FILTER_TYPES = [
   { id: 2, label: 'HP' },
 ] as const
 
+export type ArpMode = 'up' | 'down' | 'updown' | 'random'
+
+export const ARP_MODES: { id: ArpMode; label: string; labelRo: string }[] = [
+  { id: 'up',     label: 'Up',   labelRo: 'Sus'  },
+  { id: 'down',   label: 'Dn',   labelRo: 'Jos'  },
+  { id: 'updown', label: '↕',    labelRo: '↕'    },
+  { id: 'random', label: 'Rnd',  labelRo: 'Rnd'  },
+]
+
+export const ARP_DIVISIONS: { value: number; label: string }[] = [
+  { value: 4,  label: '1/4'  },
+  { value: 8,  label: '1/8'  },
+  { value: 16, label: '1/16' },
+  { value: 32, label: '1/32' },
+]
+
 interface SynthState {
   active: boolean
   // Oscillator
@@ -52,8 +68,14 @@ interface SynthState {
   lfoDepth:     number
   // Output
   gainDb:       number
-  // Frontend-only: shifts MIDI ±octaves, no Rust param
+  // Frontend-only octave shift
   octaveShift:  number
+  // Arpeggiator
+  arpEnabled:   boolean
+  arpMode:      ArpMode
+  arpBpm:       number
+  arpDivision:  number   // 4 = quarter, 8 = eighth, 16 = sixteenth, 32 = thirty-second
+  arpOctaves:   number   // 1 | 2 | 3
 
   startSynth: () => Promise<void>
   stopSynth:  () => void
@@ -70,6 +92,11 @@ interface SynthState {
   setLfoDepth:    (v: number) => void
   setGain:        (db: number) => void
   setOctaveShift: (n: number) => void
+  setArpEnabled:  (v: boolean) => void
+  setArpMode:     (m: ArpMode) => void
+  setArpBpm:      (bpm: number) => void
+  setArpDivision: (d: number) => void
+  setArpOctaves:  (n: number) => void
   noteOn:  (freqHz: number) => void
   noteOff: () => void
 }
@@ -83,24 +110,28 @@ export const useSynthStore = create<SynthState>()(
     persist(
       (set, get) => ({
         active:       false,
-        oscType:      1,        // Saw
+        oscType:      1,
         detuneCents:  0,
         attackMs:     10,
         decayMs:      200,
         sustain:      0.7,
         releaseMs:    400,
-        filterType:   0,        // LP
+        filterType:   0,
         cutoffHz:     4000,
         resonance:    0.0,
         lfoRate:      2.0,
         lfoDepth:     0.0,
         gainDb:       -6,
         octaveShift:  0,
+        arpEnabled:   false,
+        arpMode:      'up',
+        arpBpm:       120,
+        arpDivision:  8,
+        arpOctaves:   1,
 
         startSynth: async () => {
           if (getStatus().status !== 'running') await startEngine()
           engine.synthCreate()
-          // AudioWorklet port is FIFO — synth_create arrives before these params
           const s = get()
           send(SYNTH_PARAM.OSC_TYPE,     s.oscType)
           send(SYNTH_PARAM.ATTACK_MS,    s.attackMs)
@@ -119,7 +150,7 @@ export const useSynthStore = create<SynthState>()(
 
         stopSynth: () => {
           try { engine.synthDestroy() } catch { /* */ }
-          set({ active: false }, undefined, 'synth/stop')
+          set({ active: false, arpEnabled: false }, undefined, 'synth/stop')
         },
 
         setOscType:    (v)  => { set({ oscType: v },           undefined, 'synth/oscType');    send(SYNTH_PARAM.OSC_TYPE,     v)  },
@@ -135,6 +166,11 @@ export const useSynthStore = create<SynthState>()(
         setLfoDepth:   (v)  => { set({ lfoDepth: v },          undefined, 'synth/lfoDepth');   send(SYNTH_PARAM.LFO_DEPTH,    v)  },
         setGain:       (db) => { set({ gainDb: db },           undefined, 'synth/gain');       send(SYNTH_PARAM.GAIN_DB,      db) },
         setOctaveShift:(n)  => { set({ octaveShift: n },       undefined, 'synth/octave')                                         },
+        setArpEnabled: (v)  => { set({ arpEnabled: v },        undefined, 'synth/arpEnabled')                                     },
+        setArpMode:    (m)  => { set({ arpMode: m },           undefined, 'synth/arpMode')                                        },
+        setArpBpm:     (b)  => { set({ arpBpm: b },            undefined, 'synth/arpBpm')                                         },
+        setArpDivision:(d)  => { set({ arpDivision: d },       undefined, 'synth/arpDiv')                                         },
+        setArpOctaves: (n)  => { set({ arpOctaves: n },        undefined, 'synth/arpOct')                                         },
 
         noteOn:  (freqHz) => { try { engine.synthNoteOn(freqHz) } catch { /* */ } },
         noteOff: ()       => { try { engine.synthNoteOff()      } catch { /* */ } },
@@ -145,8 +181,9 @@ export const useSynthStore = create<SynthState>()(
           oscType: s.oscType, detuneCents: s.detuneCents,
           attackMs: s.attackMs, decayMs: s.decayMs, sustain: s.sustain, releaseMs: s.releaseMs,
           filterType: s.filterType, cutoffHz: s.cutoffHz, resonance: s.resonance,
-          lfoRate: s.lfoRate, lfoDepth: s.lfoDepth,
-          gainDb: s.gainDb, octaveShift: s.octaveShift,
+          lfoRate: s.lfoRate, lfoDepth: s.lfoDepth, gainDb: s.gainDb,
+          octaveShift: s.octaveShift,
+          arpMode: s.arpMode, arpBpm: s.arpBpm, arpDivision: s.arpDivision, arpOctaves: s.arpOctaves,
         }),
       },
     ),
