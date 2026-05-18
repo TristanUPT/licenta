@@ -5,11 +5,12 @@ import { decodeFile, UnsupportedAudioFormatError } from '@/audio/file-loader'
 import { start as startEngine, getContext, getStatus } from '@/audio/engine'
 
 const DEMO_SAMPLES = [
-  { id: 'voice',  label: 'Voice',   file: 'voice.wav',  desc: { ro: 'voce sintetică', en: 'synthetic voice' } },
-  { id: 'guitar', label: 'Guitar',  file: 'guitar.wav', desc: { ro: 'chitară sintetică', en: 'synthetic guitar' } },
-  { id: 'drums',  label: 'Drums',   file: 'drums.wav',  desc: { ro: 'drum loop 120 BPM', en: 'drum loop 120 BPM' } },
-  { id: 'bass',   label: 'Bass',    file: 'bass.wav',   desc: { ro: 'linie de bas', en: 'bass line' } },
-  { id: 'sweep',  label: 'Sweep',   file: 'sweep.wav',  desc: { ro: 'sweep 20Hz–20kHz', en: '20Hz–20kHz sweep' } },
+  { id: 'voice',       label: 'Voice',        file: 'voice.wav',       desc: { ro: 'voce sintetică (scară do-re-mi)', en: 'synthetic voice (C major scale)' } },
+  { id: 'guitar',      label: 'Guitar',       file: 'guitar.wav',      desc: { ro: 'chitară acustică (Am pentatonic)', en: 'acoustic guitar (Am pentatonic)' } },
+  { id: 'guitar-dist', label: 'Guitar Dist.', file: 'guitar-dist.wav', desc: { ro: 'chitară electrică distorsionată', en: 'distorted electric guitar' } },
+  { id: 'drums',       label: 'Drums',        file: 'drums.wav',       desc: { ro: 'drum loop 120 BPM', en: 'drum loop 120 BPM' } },
+  { id: 'bass',        label: 'Bass',         file: 'bass.wav',        desc: { ro: 'linie de bas', en: 'bass line' } },
+  { id: 'sweep',       label: 'Sweep',        file: 'sweep.wav',       desc: { ro: 'sweep 20Hz–20kHz', en: '20Hz–20kHz sweep' } },
 ]
 
 export function FileDropZone() {

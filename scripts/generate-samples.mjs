@@ -319,4 +319,130 @@ function placeAt(samples, eventSamples, offsetSec) {
   write('sweep.wav', envelope(out, 0.01, 0.1))
 }
 
+// ── 6. Distorted Electric Guitar: power chord riff, 120 BPM ────────────────
+{
+  // Karplus-Strong with a brighter (more sustained) filter for electric string
+  function ksElec(freq, durSec) {
+    const delayLen = Math.round(SR / freq)
+    const buf = new Float32Array(delayLen)
+    // Initial excitation: white noise burst (simulates plectrum attack)
+    for (let i = 0; i < delayLen; i++) buf[i] = Math.random() * 2 - 1
+    const n = Math.round(durSec * SR)
+    const out = new Float32Array(n)
+    let prev = 0
+    for (let i = 0; i < n; i++) {
+      const idx = i % delayLen
+      const s = buf[idx]
+      // 0.4998 → very slight brightness, slower decay (long sustain before dist)
+      const filtered = 0.4998 * (s + prev)
+      buf[idx] = filtered
+      prev = s
+      out[i] = filtered
+    }
+    return out
+  }
+
+  // Power chord: root + fifth + octave root (3-note power chord)
+  function powerChord(rootHz, durSec) {
+    const fifth  = rootHz * 1.5
+    const octave = rootHz * 2
+    const r = ksElec(rootHz, durSec)
+    const f = ksElec(fifth,  durSec)
+    const o = ksElec(octave, durSec)
+    const n = r.length
+    const out = new Float32Array(n)
+    for (let i = 0; i < n; i++) {
+      out[i] = r[i] * 0.55 + f[i] * 0.40 + o[i] * 0.25
+    }
+    return out
+  }
+
+  // tanh distortion (overdrive/heavy dist character)
+  function distort(samples, driveGain) {
+    const out = new Float32Array(samples.length)
+    for (let i = 0; i < samples.length; i++) {
+      out[i] = Math.tanh(samples[i] * driveGain)
+    }
+    return out
+  }
+
+  // One-pole high-pass (remove sub-rumble below cutHz)
+  function hpf(samples, cutHz) {
+    const RC = 1 / (2 * Math.PI * cutHz)
+    const dt = 1 / SR
+    const a = RC / (RC + dt)
+    const out = new Float32Array(samples.length)
+    let px = 0, py = 0
+    for (let i = 0; i < samples.length; i++) {
+      const y = a * (py + samples[i] - px)
+      px = samples[i]; py = y; out[i] = y
+    }
+    return out
+  }
+
+  // One-pole low-pass (guitar cabinet cut above cutHz)
+  function lpf(samples, cutHz) {
+    const a = 1 - Math.exp(-2 * Math.PI * cutHz / SR)
+    const out = new Float32Array(samples.length)
+    let z = 0
+    for (let i = 0; i < samples.length; i++) {
+      z = a * samples[i] + (1 - a) * z
+      out[i] = z
+    }
+    return out
+  }
+
+  // Cabinet: remove extreme lows and kill ultra-highs (4x12 cab approximation)
+  function cabinet(samples) {
+    let s = hpf(samples, 80)   // remove sub-bass
+    s = lpf(s, 5500)            // cab rolloff
+    s = lpf(s, 5500)            // second pass → steeper rolloff
+    return s
+  }
+
+  const bpm = 120, beat = 60 / bpm, eighth = beat / 2
+
+  // E minor power chord riff (classic rock/metal pattern, 4 bars × 2 repeats)
+  // [rootHz, startEighth, durInEighths]
+  const E2 = 82.41, A2 = 110.00, G2 = 98.00, D2 = 73.42, B2 = 123.47
+  const riff = [
+    // Bar 1: E power chord (4 downstrokes, 8th-note feel)
+    [E2, 0,  1.2], [E2, 2,  1.2], [E2, 4,  1.2], [E2, 6,  1.2],
+    // Bar 2: A then back to E
+    [A2, 8,  2.2], [A2, 10, 2.2], [E2, 12, 4.2],
+    // Bar 3: E again
+    [E2, 16, 1.2], [E2, 18, 1.2], [E2, 20, 1.2], [E2, 22, 1.2],
+    // Bar 4: G → A → E resolve
+    [G2, 24, 2.2], [A2, 26, 2.2], [E2, 28, 4.2],
+    // Repeat bars 1–4
+    [E2, 32, 1.2], [E2, 34, 1.2], [E2, 36, 1.2], [E2, 38, 1.2],
+    [A2, 40, 2.2], [A2, 42, 2.2], [E2, 44, 4.2],
+    [E2, 48, 1.2], [E2, 50, 1.2], [E2, 52, 1.2], [E2, 54, 1.2],
+    [G2, 56, 2.2], [A2, 58, 2.2], [D2, 60, 2.2], [E2, 62, 6.0], // final E, held
+  ]
+
+  const totalDur = 68 * eighth + 0.5
+  const totalSamples = Math.round(totalDur * SR)
+  const out = new Float32Array(totalSamples)
+
+  for (const [root, startEighth, durEighths] of riff) {
+    const durSec = durEighths * eighth + 0.15
+    const chord  = powerChord(root, durSec)
+    const start  = Math.round(startEighth * eighth * SR)
+    for (let i = 0; i < chord.length && start + i < totalSamples; i++) {
+      out[start + i] += chord[i]
+    }
+  }
+
+  // Normalise the clean mix to ±0.5 before distortion
+  const cleanPeak = out.reduce((m, v) => Math.max(m, Math.abs(v)), 0)
+  const normalised = out.map(v => v / cleanPeak * 0.5)
+
+  // Distort → cabinet → final normalize
+  const distorted = distort(normalised, 22)
+  const processed = cabinet(distorted)
+  const finalPeak = processed.reduce((m, v) => Math.max(m, Math.abs(v)), 0)
+  write('guitar-dist.wav', processed.map(v => v / finalPeak * 0.82))
+}
+
 console.log('\nDone. Samples saved to public/samples/')
