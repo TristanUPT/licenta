@@ -13,8 +13,8 @@ export type WorkletInMsg =
   | { type: 'reorder'; order: number[] }
   | { type: 'synth_create' }
   | { type: 'synth_destroy' }
-  | { type: 'synth_note_on'; freqHz: number }
-  | { type: 'synth_note_off' }
+  | { type: 'synth_note_on'; midiNote: number; freqHz: number }
+  | { type: 'synth_note_off'; midiNote: number }
   | { type: 'synth_set_param'; paramId: number; value: number }
 
 export type WorkletOutMsg =

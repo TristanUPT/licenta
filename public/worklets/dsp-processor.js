@@ -79,11 +79,11 @@ class DspProcessor extends AudioWorkletProcessor {
           break;
         case 'synth_note_on':
           if (this.ready && this.synthPtr !== 0)
-            this.wasm.synth_note_on(this.synthPtr, msg.freqHz);
+            this.wasm.synth_note_on(this.synthPtr, msg.midiNote, msg.freqHz);
           break;
         case 'synth_note_off':
           if (this.ready && this.synthPtr !== 0)
-            this.wasm.synth_note_off(this.synthPtr);
+            this.wasm.synth_note_off(this.synthPtr, msg.midiNote);
           break;
         case 'synth_set_param':
           if (this.ready && this.synthPtr !== 0)

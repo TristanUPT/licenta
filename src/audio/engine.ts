@@ -223,12 +223,12 @@ export function synthDestroy(): void {
   postOrThrow({ type: 'synth_destroy' })
 }
 
-export function synthNoteOn(freqHz: number): void {
-  postOrThrow({ type: 'synth_note_on', freqHz })
+export function synthNoteOn(midiNote: number, freqHz: number): void {
+  postOrThrow({ type: 'synth_note_on', midiNote, freqHz })
 }
 
-export function synthNoteOff(): void {
-  postOrThrow({ type: 'synth_note_off' })
+export function synthNoteOff(midiNote: number): void {
+  postOrThrow({ type: 'synth_note_off', midiNote })
 }
 
 export function synthSetParam(paramId: number, value: number): void {

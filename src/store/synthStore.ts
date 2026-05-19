@@ -100,8 +100,9 @@ interface SynthState {
   setArpDivision: (d: number) => void
   setArpOctaves:  (n: number) => void
   setArpGate:     (g: number) => void
-  noteOn:  (freqHz: number) => void
-  noteOff: () => void
+  noteOn:     (midi: number, freqHz: number) => void
+  noteOff:    (midi: number) => void
+  noteOffAll: () => void
 }
 
 function send(paramId: number, value: number) {
@@ -177,8 +178,9 @@ export const useSynthStore = create<SynthState>()(
         setArpOctaves: (n)  => { set({ arpOctaves: n },        undefined, 'synth/arpOct')                                         },
         setArpGate:    (g)  => { set({ arpGate: g },           undefined, 'synth/arpGate')                                        },
 
-        noteOn:  (freqHz) => { try { engine.synthNoteOn(freqHz) } catch { /* */ } },
-        noteOff: ()       => { try { engine.synthNoteOff()      } catch { /* */ } },
+        noteOn:     (midi, freq) => { try { engine.synthNoteOn(midi, freq)  } catch { /* */ } },
+        noteOff:    (midi)       => { try { engine.synthNoteOff(midi)       } catch { /* */ } },
+        noteOffAll: ()           => { try { engine.synthNoteOff(255)        } catch { /* */ } },
       }),
       {
         name: 'synthStore',

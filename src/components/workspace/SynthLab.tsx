@@ -216,6 +216,7 @@ export function SynthLab() {
   const setOctaveShift = useSynthStore((s) => s.setOctaveShift)
   const noteOn        = useSynthStore((s) => s.noteOn)
   const noteOff       = useSynthStore((s) => s.noteOff)
+  const noteOffAll    = useSynthStore((s) => s.noteOffAll)
 
   // ── WebMIDI ──
   const { devices: midiDevices, supported: midiSupported, permissionDenied: midiDenied } = useMidi({
@@ -275,10 +276,12 @@ export function SynthLab() {
   }
 
   // ── Note-on / note-off helpers (arp-aware, called from piano + keyboard) ──
-  const noteOnRef  = useRef(noteOn)
-  noteOnRef.current = noteOn
-  const noteOffRef = useRef(noteOff)
-  noteOffRef.current = noteOff
+  const noteOnRef     = useRef(noteOn)
+  noteOnRef.current   = noteOn
+  const noteOffRef    = useRef(noteOff)
+  noteOffRef.current  = noteOff
+  const noteOffAllRef = useRef(noteOffAll)
+  noteOffAllRef.current = noteOffAll
 
   function handleNoteOn(midi: number) {
     if (!active) return
@@ -288,7 +291,7 @@ export function SynthLab() {
       arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
       if (arpNotesRef.current.size === 1) arpStepRef.current = 0
     } else {
-      noteOnRef.current(midiToFreq(midi))
+      noteOnRef.current(midi, midiToFreq(midi))
       setActiveNote(midi)
       activeNoteRef.current = midi
     }
@@ -301,14 +304,14 @@ export function SynthLab() {
       syncArpDisplay()
       arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
       if (arpNotesRef.current.size === 0) {
-        noteOffRef.current()
+        noteOffAllRef.current()
         setActiveNote(null)
         activeNoteRef.current = null
         arpStepRef.current = 0
       }
     } else {
       if (activeNoteRef.current === midi) {
-        noteOffRef.current()
+        noteOffRef.current(midi)
         setActiveNote(null)
         activeNoteRef.current = null
       }
@@ -332,7 +335,7 @@ export function SynthLab() {
         arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
         if (arpNotesRef.current.size === 1) arpStepRef.current = 0
       } else {
-        noteOnRef.current(midiToFreq(midi))
+        noteOnRef.current(midi, midiToFreq(midi))
         setActiveNote(midi)
         activeNoteRef.current = midi
       }
@@ -349,23 +352,23 @@ export function SynthLab() {
         syncArpDisplay()
         arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
         if (arpNotesRef.current.size === 0) {
-          noteOffRef.current()
+          noteOffAllRef.current()
           setActiveNote(null)
           activeNoteRef.current = null
           arpStepRef.current = 0
         }
       } else {
         if (heldKeys.current.size === 0) {
-          noteOffRef.current()
+          noteOffRef.current(midi)
           setActiveNote(null)
           activeNoteRef.current = null
         } else if (activeNoteRef.current === midi) {
-          // Retrigger last held key
+          // Retrigger last held key (mono legato)
           const codes = [...heldKeys.current]
           const lastOffset = KEY_OFFSETS[codes[codes.length - 1] ?? '']
           if (lastOffset !== undefined) {
             const lastMidi = effectiveStartRef.current + lastOffset
-            noteOnRef.current(midiToFreq(lastMidi))
+            noteOnRef.current(lastMidi, midiToFreq(lastMidi))
             setActiveNote(lastMidi)
             activeNoteRef.current = lastMidi
           }
@@ -385,7 +388,7 @@ export function SynthLab() {
   useEffect(() => {
     if (!arpEnabled || !active) {
       // Ensure silence when arp is off
-      noteOffRef.current()
+      noteOffAllRef.current()
       setActiveNote(null)
       activeNoteRef.current = null
       return
@@ -400,7 +403,7 @@ export function SynthLab() {
     const id = setInterval(() => {
       const seq = arpSeqRef.current
       if (seq.length === 0) {
-        noteOffRef.current()
+        noteOffAllRef.current()
         setActiveNote(null)
         activeNoteRef.current = null
         return
@@ -420,12 +423,13 @@ export function SynthLab() {
           clearTimeout(gateTimeoutRef.current)
           gateTimeoutRef.current = null
         }
-        noteOnRef.current(midiToFreq(midi))
+        noteOnRef.current(midi, midiToFreq(midi))
         setActiveNote(midi)
         activeNoteRef.current = midi
         if (arpGateRef.current < 0.99) {
+          const gateMidi = midi   // capture for the timeout closure
           gateTimeoutRef.current = setTimeout(() => {
-            noteOffRef.current()
+            noteOffRef.current(gateMidi)
             gateTimeoutRef.current = null
           }, intervalMs * arpGateRef.current)
         }
@@ -439,7 +443,7 @@ export function SynthLab() {
         clearTimeout(gateTimeoutRef.current)
         gateTimeoutRef.current = null
       }
-      noteOffRef.current()
+      noteOffAllRef.current()
       setActiveNote(null)
       activeNoteRef.current = null
     }
@@ -461,6 +465,7 @@ export function SynthLab() {
       arpNotesRef.current.clear()
       syncArpDisplay()
       arpSeqRef.current = []
+      noteOffAllRef.current()
     }
     setArpEnabled(v)
   }
@@ -471,7 +476,7 @@ export function SynthLab() {
     syncArpDisplay()
     arpSeqRef.current = []
     heldKeys.current.clear()
-    noteOffRef.current()
+    noteOffAllRef.current()
     setActiveNote(null)
     activeNoteRef.current = null
     setOctaveShift(n)
