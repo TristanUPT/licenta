@@ -76,6 +76,7 @@ interface SynthState {
   arpBpm:       number
   arpDivision:  number   // 4 = quarter, 8 = eighth, 16 = sixteenth, 32 = thirty-second
   arpOctaves:   number   // 1 | 2 | 3
+  arpGate:      number   // 0.1–1.0, note length as fraction of step interval
 
   startSynth: () => Promise<void>
   stopSynth:  () => void
@@ -97,6 +98,7 @@ interface SynthState {
   setArpBpm:      (bpm: number) => void
   setArpDivision: (d: number) => void
   setArpOctaves:  (n: number) => void
+  setArpGate:     (g: number) => void
   noteOn:  (freqHz: number) => void
   noteOff: () => void
 }
@@ -128,6 +130,7 @@ export const useSynthStore = create<SynthState>()(
         arpBpm:       120,
         arpDivision:  8,
         arpOctaves:   1,
+        arpGate:      0.8,
 
         startSynth: async () => {
           if (getStatus().status !== 'running') await startEngine()
@@ -171,6 +174,7 @@ export const useSynthStore = create<SynthState>()(
         setArpBpm:     (b)  => { set({ arpBpm: b },            undefined, 'synth/arpBpm')                                         },
         setArpDivision:(d)  => { set({ arpDivision: d },       undefined, 'synth/arpDiv')                                         },
         setArpOctaves: (n)  => { set({ arpOctaves: n },        undefined, 'synth/arpOct')                                         },
+        setArpGate:    (g)  => { set({ arpGate: g },           undefined, 'synth/arpGate')                                        },
 
         noteOn:  (freqHz) => { try { engine.synthNoteOn(freqHz) } catch { /* */ } },
         noteOff: ()       => { try { engine.synthNoteOff()      } catch { /* */ } },
@@ -183,7 +187,7 @@ export const useSynthStore = create<SynthState>()(
           filterType: s.filterType, cutoffHz: s.cutoffHz, resonance: s.resonance,
           lfoRate: s.lfoRate, lfoDepth: s.lfoDepth, gainDb: s.gainDb,
           octaveShift: s.octaveShift,
-          arpMode: s.arpMode, arpBpm: s.arpBpm, arpDivision: s.arpDivision, arpOctaves: s.arpOctaves,
+          arpMode: s.arpMode, arpBpm: s.arpBpm, arpDivision: s.arpDivision, arpOctaves: s.arpOctaves, arpGate: s.arpGate,
         }),
       },
     ),

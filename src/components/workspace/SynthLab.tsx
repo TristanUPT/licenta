@@ -164,9 +164,13 @@ export function SynthLab() {
   const setArpBpm      = useSynthStore((s) => s.setArpBpm)
   const setArpDivision = useSynthStore((s) => s.setArpDivision)
   const setArpOctaves  = useSynthStore((s) => s.setArpOctaves)
+  const arpGate       = useSynthStore((s) => s.arpGate)
+  const setArpGate    = useSynthStore((s) => s.setArpGate)
 
   // ── Visual state ──
   const [activeNote, setActiveNote] = useState<number | null>(null)
+  const [arpQueuedNotes, setArpQueuedNotes] = useState<Set<number>>(new Set())
+  const [tapFlash, setTapFlash] = useState(false)
 
   // ── Stable refs (keyboard handler reads these without re-registering) ──
   const effectiveStartRef = useRef(START_MIDI_BASE + octaveShift * 12)
@@ -184,12 +188,20 @@ export function SynthLab() {
   const arpNotesRef    = useRef<Set<number>>(new Set())
   const arpStepRef     = useRef(0)
   const arpSeqRef      = useRef<number[]>([])
+  const arpGateRef     = useRef(arpGate)
+  arpGateRef.current   = arpGate
+  const gateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tapTimesRef    = useRef<number[]>([])
 
   // ── Piano layout ──
   const effectiveStartMidi = START_MIDI_BASE + octaveShift * 12
   const pianoKeys = useMemo(() => buildKeys(effectiveStartMidi), [effectiveStartMidi])
   const whiteKeys = useMemo(() => pianoKeys.filter((k) => !k.isBlack), [pianoKeys])
   const blackKeys = useMemo(() => pianoKeys.filter((k) => k.isBlack), [pianoKeys])
+
+  function syncArpDisplay() {
+    setArpQueuedNotes(new Set(arpNotesRef.current))
+  }
 
   // ── Note-on / note-off helpers (arp-aware, called from piano + keyboard) ──
   const noteOnRef  = useRef(noteOn)
@@ -201,6 +213,7 @@ export function SynthLab() {
     if (!active) return
     if (arpEnabledRef.current) {
       arpNotesRef.current.add(midi)
+      syncArpDisplay()
       arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
       if (arpNotesRef.current.size === 1) arpStepRef.current = 0
     } else {
@@ -214,6 +227,7 @@ export function SynthLab() {
     if (!active) return
     if (arpEnabledRef.current) {
       arpNotesRef.current.delete(midi)
+      syncArpDisplay()
       arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
       if (arpNotesRef.current.size === 0) {
         noteOffRef.current()
@@ -243,6 +257,7 @@ export function SynthLab() {
 
       if (arpEnabledRef.current) {
         arpNotesRef.current.add(midi)
+        syncArpDisplay()
         arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
         if (arpNotesRef.current.size === 1) arpStepRef.current = 0
       } else {
@@ -260,6 +275,7 @@ export function SynthLab() {
 
       if (arpEnabledRef.current) {
         arpNotesRef.current.delete(midi)
+        syncArpDisplay()
         arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
         if (arpNotesRef.current.size === 0) {
           noteOffRef.current()
@@ -329,15 +345,29 @@ export function SynthLab() {
 
       const midi = arpSeqRef.current[arpStepRef.current]
       if (midi !== undefined) {
+        if (gateTimeoutRef.current !== null) {
+          clearTimeout(gateTimeoutRef.current)
+          gateTimeoutRef.current = null
+        }
         noteOnRef.current(midiToFreq(midi))
         setActiveNote(midi)
         activeNoteRef.current = midi
+        if (arpGateRef.current < 0.99) {
+          gateTimeoutRef.current = setTimeout(() => {
+            noteOffRef.current()
+            gateTimeoutRef.current = null
+          }, intervalMs * arpGateRef.current)
+        }
       }
       arpStepRef.current++
     }, intervalMs)
 
     return () => {
       clearInterval(id)
+      if (gateTimeoutRef.current !== null) {
+        clearTimeout(gateTimeoutRef.current)
+        gateTimeoutRef.current = null
+      }
       noteOffRef.current()
       setActiveNote(null)
       activeNoteRef.current = null
@@ -353,10 +383,12 @@ export function SynthLab() {
         const offset = KEY_OFFSETS[code]
         if (offset !== undefined) arpNotesRef.current.add(effectiveStartRef.current + offset)
       }
+      syncArpDisplay()
       arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
       arpStepRef.current = 0
     } else {
       arpNotesRef.current.clear()
+      syncArpDisplay()
       arpSeqRef.current = []
     }
     setArpEnabled(v)
@@ -365,12 +397,33 @@ export function SynthLab() {
   function handleOctaveShift(n: number) {
     // Clear arp notes to avoid stuck notes when octave changes mid-play
     arpNotesRef.current.clear()
+    syncArpDisplay()
     arpSeqRef.current = []
     heldKeys.current.clear()
     noteOffRef.current()
     setActiveNote(null)
     activeNoteRef.current = null
     setOctaveShift(n)
+  }
+
+  function handleTapTempo() {
+    const now = performance.now()
+    const times = tapTimesRef.current
+    if (times.length > 0 && now - times[times.length - 1]! > 3000) {
+      tapTimesRef.current = [now]
+      setTapFlash(true); setTimeout(() => setTapFlash(false), 100)
+      return
+    }
+    times.push(now)
+    if (times.length > 8) times.splice(0, times.length - 8)
+    if (times.length >= 2) {
+      let total = 0
+      for (let i = 1; i < times.length; i++) total += times[i]! - times[i - 1]!
+      const bpm = Math.round(60_000 / (total / (times.length - 1)))
+      setArpBpm(Math.min(300, Math.max(40, bpm)))
+    }
+    setTapFlash(true)
+    setTimeout(() => setTapFlash(false), 100)
   }
 
   function loadPatch(p: Patch) {
@@ -588,6 +641,12 @@ export function SynthLab() {
               onClick={() => setArpBpm(Math.min(300, arpBpm + (arpBpm >= 100 ? 5 : 1)))}
               className="rounded px-1.5 py-0.5 text-[10px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
             >+</button>
+            <button
+              onClick={handleTapTempo}
+              className={`rounded px-2 py-0.5 text-[10px] font-semibold transition ${
+                tapFlash ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300'
+              }`}
+            >Tap</button>
           </div>
 
           {/* Division */}
@@ -627,6 +686,22 @@ export function SynthLab() {
               </button>
             ))}
           </div>
+
+          {/* Gate */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] uppercase tracking-wider text-zinc-600">
+              {ro ? 'Poartă' : 'Gate'}
+            </span>
+            <input
+              type="range" min={0.1} max={1.0} step={0.01}
+              value={arpGate}
+              onChange={(e) => setArpGate(Number(e.target.value))}
+              className="w-16 cursor-pointer accent-purple-500"
+            />
+            <span className="w-7 font-mono text-[10px] text-zinc-400">
+              {Math.round(arpGate * 100)}%
+            </span>
+          </div>
         </div>
 
         {arpEnabled && (
@@ -643,7 +718,7 @@ export function SynthLab() {
         {whiteKeys.map((key, idx) => {
           const width  = 100 / whiteKeys.length
           const isC    = key.midi % 12 === 0
-          const queued = arpEnabled && arpNotesRef.current.has(key.midi)
+          const queued = arpEnabled && arpQueuedNotes.has(key.midi)
           return (
             <div
               key={key.midi}
@@ -672,7 +747,7 @@ export function SynthLab() {
         {blackKeys.map((key) => {
           const left  = blackKeyLeft(key.midi)
           const width = (100 / whiteKeys.length) * 0.6
-          const queued = arpEnabled && arpNotesRef.current.has(key.midi)
+          const queued = arpEnabled && arpQueuedNotes.has(key.midi)
           return (
             <div
               key={key.midi}
