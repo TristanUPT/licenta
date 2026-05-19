@@ -4,6 +4,7 @@ import {
   ARP_MODES, ARP_DIVISIONS, type ArpMode,
 } from '@/store/synthStore'
 import { useEducationStore } from '@/store/educationStore'
+import { useMidi } from '@/hooks/useMidi'
 
 // ─── MIDI helpers ─────────────────────────────────────────────────────────────
 
@@ -152,6 +153,12 @@ export function SynthLab() {
   const setOctaveShift = useSynthStore((s) => s.setOctaveShift)
   const noteOn        = useSynthStore((s) => s.noteOn)
   const noteOff       = useSynthStore((s) => s.noteOff)
+
+  // ── WebMIDI ──
+  const { devices: midiDevices, supported: midiSupported, permissionDenied: midiDenied } = useMidi({
+    onNoteOn:  (midi) => { if (active) handleNoteOn(midi) },
+    onNoteOff: (midi) => { if (active) handleNoteOff(midi) },
+  })
 
   // ── Arp params ──
   const arpEnabled   = useSynthStore((s) => s.arpEnabled)
@@ -476,6 +483,26 @@ export function SynthLab() {
               className="rounded px-1.5 py-0.5 text-xs text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-30"
             >▸</button>
           </div>
+          {/* MIDI status */}
+          {midiSupported === true && (
+            <div className="flex items-center gap-1 text-[10px]">
+              {midiDenied ? (
+                <span className="text-zinc-600" title="MIDI permission denied">MIDI ✗</span>
+              ) : midiDevices.length > 0 ? (
+                <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <span className="max-w-[7rem] truncate text-zinc-400" title={midiDevices.map((d) => d.name).join(', ')}>
+                    {midiDevices.length === 1
+                      ? midiDevices[0]!.name
+                      : `${midiDevices.length} MIDI`}
+                  </span>
+                </>
+              ) : (
+                <span className="text-zinc-700">No MIDI</span>
+              )}
+            </div>
+          )}
+
           {/* Start / Stop */}
           <button
             onClick={() => { active ? stopSynth() : void startSynth() }}
