@@ -22,6 +22,7 @@ type StatsListener = (stats: EngineStats) => void
 
 let ctx: AudioContext | null = null
 let node: AudioWorkletNode | null = null
+let analyser: AnalyserNode | null = null
 let status: EngineStatus = 'idle'
 let lastError: string | undefined
 const listeners = new Set<Listener>()
@@ -130,6 +131,13 @@ export async function start(): Promise<void> {
       // Connect permanently so the worklet renders even without file playback
       // (synth-only mode, meter updates, etc.). Repeated connect() is a no-op.
       newNode.connect(ctx.destination)
+
+      // Parallel tap for oscilloscope — no audio path change.
+      analyser = ctx.createAnalyser()
+      analyser.fftSize = 2048
+      analyser.smoothingTimeConstant = 0
+      newNode.connect(analyser)
+
       node = newNode
     }
 
@@ -152,6 +160,10 @@ export function getContext(): AudioContext | null {
 
 export function getNode(): AudioWorkletNode | null {
   return node
+}
+
+export function getAnalyser(): AnalyserNode | null {
+  return analyser
 }
 
 export function getStatus(): { status: EngineStatus; error?: string } {

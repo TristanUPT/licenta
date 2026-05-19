@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  useSynthStore, OSC_TYPES, FILTER_TYPES,
+  useSynthStore, SYNTH_PARAM, OSC_TYPES, FILTER_TYPES,
   ARP_MODES, ARP_DIVISIONS, type ArpMode,
 } from '@/store/synthStore'
 import { useEducationStore } from '@/store/educationStore'
 import { useMidi } from '@/hooks/useMidi'
+import { getAnalyser, synthSetParam } from '@/audio/engine'
 
 // ─── MIDI helpers ─────────────────────────────────────────────────────────────
 
@@ -113,6 +114,68 @@ function Slider({ label, value, min, max, format, onChange, log }: SliderProps) 
   )
 }
 
+// ─── Oscilloscope ─────────────────────────────────────────────────────────────
+
+function SynthScope() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const analyser = getAnalyser()
+    const canvas   = canvasRef.current
+    if (!analyser || !canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const N   = analyser.fftSize          // 2048
+    const buf = new Float32Array(N)
+    let rafId = 0
+
+    function draw() {
+      rafId = requestAnimationFrame(draw)
+      analyser!.getFloatTimeDomainData(buf)
+
+      const W = canvas!.width
+      const H = canvas!.height
+
+      ctx!.fillStyle = '#18181b'          // zinc-900
+      ctx!.fillRect(0, 0, W, H)
+
+      // Center grid line
+      ctx!.strokeStyle = '#3f3f46'        // zinc-700
+      ctx!.lineWidth = 1
+      ctx!.beginPath()
+      ctx!.moveTo(0, H / 2)
+      ctx!.lineTo(W, H / 2)
+      ctx!.stroke()
+
+      // Waveform — maps [-1, 1] to [5 %, 95 %] of height
+      ctx!.strokeStyle = '#a855f7'        // purple-500
+      ctx!.lineWidth = 1.5
+      ctx!.beginPath()
+      const step = W / N
+      for (let i = 0; i < N; i++) {
+        const y = (0.5 - buf[i] * 0.45) * H
+        if (i === 0) ctx!.moveTo(0, y)
+        else         ctx!.lineTo(i * step, y)
+      }
+      ctx!.stroke()
+    }
+
+    draw()
+    return () => cancelAnimationFrame(rafId)
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={1024}
+      height={80}
+      className="w-full rounded-lg"
+    />
+  )
+}
+
 // ─── SynthLab ─────────────────────────────────────────────────────────────────
 
 const START_MIDI_BASE = 48  // C3 at octaveShift = 0
@@ -178,6 +241,7 @@ export function SynthLab() {
   const [activeNote, setActiveNote] = useState<number | null>(null)
   const [arpQueuedNotes, setArpQueuedNotes] = useState<Set<number>>(new Set())
   const [tapFlash, setTapFlash] = useState(false)
+  const [pitchBend, setPitchBend] = useState(0)  // cents, ±200
 
   // ── Stable refs (keyboard handler reads these without re-registering) ──
   const effectiveStartRef = useRef(START_MIDI_BASE + octaveShift * 12)
@@ -413,6 +477,11 @@ export function SynthLab() {
     setOctaveShift(n)
   }
 
+  function handlePitchBend(cents: number) {
+    setPitchBend(cents)
+    try { synthSetParam(SYNTH_PARAM.PITCH_BEND, cents / 100) } catch { /* engine not ready */ }
+  }
+
   function handleTapTempo() {
     const now = performance.now()
     const times = tapTimesRef.current
@@ -606,6 +675,13 @@ export function SynthLab() {
         </div>
       </div>
 
+      {/* Oscilloscope */}
+      {active && (
+        <div className="mt-4">
+          <SynthScope />
+        </div>
+      )}
+
       {/* ── Arpeggiator ── */}
       <div className={`mt-4 rounded-xl border px-3 py-2.5 transition-colors ${
         arpEnabled
@@ -740,8 +816,30 @@ export function SynthLab() {
         )}
       </div>
 
-      {/* Piano keyboard */}
-      <div className="relative mt-4 h-20 w-full select-none overflow-hidden rounded-lg border border-zinc-700">
+      {/* Pitch wheel + Piano keyboard */}
+      <div className="mt-4 flex items-stretch gap-2">
+
+        {/* Pitch bend wheel — vertical, springs to centre on release */}
+        {active && (
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500">PB</span>
+            <input
+              type="range" min={-200} max={200} step={1}
+              value={pitchBend}
+              onChange={(e) => handlePitchBend(Number(e.target.value))}
+              onMouseUp={() => handlePitchBend(0)}
+              onTouchEnd={() => handlePitchBend(0)}
+              className="h-14 w-3 cursor-grab appearance-none rounded-full bg-zinc-700 accent-purple-500"
+              style={{ writingMode: 'vertical-lr', direction: 'rtl' } as React.CSSProperties}
+            />
+            <span className="w-8 text-center font-mono text-[9px] text-zinc-500">
+              {pitchBend === 0 ? '±0' : `${pitchBend > 0 ? '+' : ''}${(pitchBend / 100).toFixed(1)}`}
+            </span>
+          </div>
+        )}
+
+        {/* Piano keyboard */}
+        <div className="relative h-20 flex-1 select-none overflow-hidden rounded-lg border border-zinc-700">
         {whiteKeys.map((key, idx) => {
           const width  = 100 / whiteKeys.length
           const isC    = key.midi % 12 === 0
@@ -794,7 +892,8 @@ export function SynthLab() {
             />
           )
         })}
-      </div>
+        </div>{/* /piano keyboard */}
+      </div>{/* /pitch-wheel + keyboard row */}
 
       {active && !arpEnabled && (
         <p className="mt-2 text-[10px] text-zinc-600">

@@ -17,6 +17,7 @@ export const SYNTH_PARAM = {
   DETUNE_CENTS: 9,
   LFO_RATE:     10,
   LFO_DEPTH:    11,
+  PITCH_BEND:   12,  // semitones ±12
 } as const
 
 export const OSC_TYPES = [

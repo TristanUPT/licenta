@@ -19,6 +19,7 @@ pub const SYNTH_PARAM_FILTER_TYPE:  u32 = 8;
 pub const SYNTH_PARAM_DETUNE_CENTS: u32 = 9;
 pub const SYNTH_PARAM_LFO_RATE:     u32 = 10;
 pub const SYNTH_PARAM_LFO_DEPTH:    u32 = 11;
+pub const SYNTH_PARAM_PITCH_BEND:   u32 = 12;  // semitones, range ±12
 
 pub struct SynthEngine {
     sample_rate: f32,
@@ -36,6 +37,8 @@ pub struct SynthEngine {
     lfo_phase_inc: f32,
     lfo_depth:     f32,
     base_cutoff:   f32,
+    // Pitch bend (semitones, updated from UI; applied as 2^(n/12) ratio)
+    pitch_bend_semitones: f32,
 }
 
 impl SynthEngine {
@@ -50,19 +53,21 @@ impl SynthEngine {
             gain_lin:      1.0,
             detune_ratio:  1.0,
             base_freq:     440.0,
-            lfo_phase:     0.0,
-            lfo_phase_inc: 2.0 / sample_rate,   // 2 Hz default
-            lfo_depth:     0.0,
-            base_cutoff:   8_000.0,
+            lfo_phase:            0.0,
+            lfo_phase_inc:        2.0 / sample_rate,   // 2 Hz default
+            lfo_depth:            0.0,
+            base_cutoff:          8_000.0,
+            pitch_bend_semitones: 0.0,
         }
     }
 
     pub fn note_on(&mut self, freq_hz: f32) {
         self.base_freq = freq_hz;
-        self.osc.set_frequency(freq_hz / self.detune_ratio);
+        let bend = 2f32.powf(self.pitch_bend_semitones / 12.0);
+        self.osc.set_frequency((freq_hz / self.detune_ratio) * bend);
         self.osc.reset_phase();
         // osc2 phase intentionally NOT reset → phase offset produces chorus thickening
-        self.osc2.set_frequency(freq_hz * self.detune_ratio);
+        self.osc2.set_frequency((freq_hz * self.detune_ratio) * bend);
         self.adsr.note_on();
     }
 
@@ -94,8 +99,15 @@ impl SynthEngine {
                 let cents = value.clamp(0.0, 50.0);
                 // 2^(cents/2400) gives symmetric detuning: osc1 low, osc2 high
                 self.detune_ratio = 2f32.powf(cents / 2400.0);
-                self.osc.set_frequency(self.base_freq / self.detune_ratio);
-                self.osc2.set_frequency(self.base_freq * self.detune_ratio);
+                let bend = 2f32.powf(self.pitch_bend_semitones / 12.0);
+                self.osc.set_frequency((self.base_freq / self.detune_ratio) * bend);
+                self.osc2.set_frequency((self.base_freq * self.detune_ratio) * bend);
+            }
+            SYNTH_PARAM_PITCH_BEND => {
+                self.pitch_bend_semitones = value.clamp(-12.0, 12.0);
+                let bend = 2f32.powf(self.pitch_bend_semitones / 12.0);
+                self.osc.set_frequency((self.base_freq / self.detune_ratio) * bend);
+                self.osc2.set_frequency((self.base_freq * self.detune_ratio) * bend);
             }
             SYNTH_PARAM_LFO_RATE => {
                 self.lfo_phase_inc = value.clamp(0.01, 20.0) / self.sample_rate;
