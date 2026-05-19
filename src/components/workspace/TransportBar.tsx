@@ -5,6 +5,7 @@ import { useEffectsStore } from '@/store/effectsStore'
 import * as transport from '@/audio/transport'
 import { renderAndDownload } from '@/audio/export'
 import { LevelMeter } from '@/components/visualization/LevelMeter'
+import { useRecording } from '@/hooks/useRecording'
 
 function formatTime(sec: number): string {
   if (!isFinite(sec) || sec < 0) sec = 0
@@ -137,6 +138,8 @@ export function TransportBar() {
           </button>
         </div>
 
+        <RecordingControls />
+
         <div className="flex flex-1 items-baseline gap-1.5 font-mono text-xs sm:gap-2 sm:text-sm">
           <span className="text-zinc-100">{formatTime(playbackPosition)}</span>
           <span className="text-zinc-600">/</span>
@@ -197,6 +200,80 @@ export function TransportBar() {
             aria-label="Remove file"
           >✕</button>
         </div>
+      )}
+    </div>
+  )
+}
+
+function RecordingControls() {
+  const { micActive, isRecording, recordingUrl, recExt, micError, toggleMic, startRecording, stopRecording, clearRecording } = useRecording()
+
+  return (
+    <div className="flex items-center gap-1 sm:gap-1.5">
+      {/* Mic toggle */}
+      <button
+        onClick={() => void toggleMic()}
+        title={micError ?? (micActive ? 'Disable microphone' : 'Enable microphone input')}
+        className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
+          micError
+            ? 'bg-red-900 text-red-400 hover:bg-red-800'
+            : micActive
+            ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+        }`}
+      >
+        <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5" fill="currentColor" viewBox="0 0 24 24">
+          <rect x="9" y="2" width="6" height="11" rx="3" />
+          <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth={2} fill="none" strokeLinecap="round" />
+          <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+          <line x1="9" y1="21" x2="15" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+        </svg>
+      </button>
+
+      {/* Record / Stop record */}
+      <button
+        onClick={isRecording ? stopRecording : startRecording}
+        title={isRecording ? 'Stop recording' : 'Start recording'}
+        className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
+          isRecording
+            ? 'bg-red-600 text-white hover:bg-red-500'
+            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+        }`}
+      >
+        {isRecording ? (
+          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
+        ) : (
+          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" /></svg>
+        )}
+      </button>
+
+      {/* Pulsing REC badge */}
+      {isRecording && (
+        <span className="hidden animate-pulse font-mono text-[10px] font-bold tracking-widest text-red-400 sm:block">
+          REC
+        </span>
+      )}
+
+      {/* Download + clear when a recording exists */}
+      {recordingUrl && !isRecording && (
+        <>
+          <a
+            href={recordingUrl}
+            download={`recording.${recExt}`}
+            title="Download recording"
+            className="hidden h-9 items-center gap-1 rounded-lg bg-zinc-800 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-300 transition hover:bg-zinc-700 hover:text-white sm:flex sm:h-10"
+          >
+            <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {recExt.toUpperCase()}
+          </a>
+          <button
+            onClick={clearRecording}
+            title="Discard recording"
+            className="text-xs text-zinc-600 transition hover:text-zinc-300"
+          >✕</button>
+        </>
       )}
     </div>
   )
