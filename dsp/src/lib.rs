@@ -48,6 +48,32 @@ pub unsafe extern "C" fn process(
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn process_stereo(
+    engine: *mut Engine,
+    in_l_ptr: *const f32,
+    in_r_ptr: *const f32,
+    out_l_ptr: *mut f32,
+    out_r_ptr: *mut f32,
+    len: u32,
+) -> i32 {
+    if engine.is_null()
+        || in_l_ptr.is_null() || in_r_ptr.is_null()
+        || out_l_ptr.is_null() || out_r_ptr.is_null()
+    {
+        return -1;
+    }
+    let n = len as usize;
+    unsafe {
+        let in_l  = core::slice::from_raw_parts(in_l_ptr, n);
+        let in_r  = core::slice::from_raw_parts(in_r_ptr, n);
+        let out_l = core::slice::from_raw_parts_mut(out_l_ptr, n);
+        let out_r = core::slice::from_raw_parts_mut(out_r_ptr, n);
+        (*engine).process_block_stereo(in_l, in_r, out_l, out_r);
+    }
+    0
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn get_blocks_processed(engine: *const Engine) -> u64 {
     if engine.is_null() { return 0 }
     unsafe { (*engine).blocks_processed() }

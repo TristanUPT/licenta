@@ -14,12 +14,17 @@ class DspProcessor extends AudioWorkletProcessor {
     this.globalBypassed = false;
     this.wasm = null;
     this.enginePtr = 0;
+    // Stereo input/output buffers (L = existing names, R = new).
     this.inputPtr = 0;
+    this.inputRPtr = 0;
     this.outputPtr = 0;
+    this.outputRPtr = 0;
     this.meterIdsPtr = 0;
     this.meterValsPtr = 0;
     this.inputView = null;
+    this.inputRView = null;
     this.outputView = null;
+    this.outputRView = null;
     this.meterIdsView = null;
     this.meterValsView = null;
     this.localBlockCount = 0;
@@ -107,8 +112,11 @@ class DspProcessor extends AudioWorkletProcessor {
     this.wasm = instance.exports;
     console.log('[worklet] wasm exports:', Object.keys(this.wasm));
 
-    this.inputPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
-    this.outputPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
+    // Stereo: L + R input/output buffers.
+    this.inputPtr    = this.wasm.alloc_f32(RENDER_QUANTUM);
+    this.inputRPtr   = this.wasm.alloc_f32(RENDER_QUANTUM);
+    this.outputPtr   = this.wasm.alloc_f32(RENDER_QUANTUM);
+    this.outputRPtr  = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.synthBufPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.meterIdsPtr = this.wasm.alloc_u32(MAX_METER_SLOTS);
     this.meterValsPtr = this.wasm.alloc_f32(MAX_METER_SLOTS);
@@ -135,7 +143,9 @@ class DspProcessor extends AudioWorkletProcessor {
   _refreshViews() {
     const buffer = this.wasm.memory.buffer;
     this.inputView    = new Float32Array(buffer, this.inputPtr,    RENDER_QUANTUM);
+    this.inputRView   = new Float32Array(buffer, this.inputRPtr,   RENDER_QUANTUM);
     this.outputView   = new Float32Array(buffer, this.outputPtr,   RENDER_QUANTUM);
+    this.outputRView  = new Float32Array(buffer, this.outputRPtr,  RENDER_QUANTUM);
     this.synthBufView = new Float32Array(buffer, this.synthBufPtr, RENDER_QUANTUM);
     this.meterIdsView = new Uint32Array(buffer,  this.meterIdsPtr, MAX_METER_SLOTS);
     this.meterValsView = new Float32Array(buffer, this.meterValsPtr, MAX_METER_SLOTS);
@@ -151,7 +161,7 @@ class DspProcessor extends AudioWorkletProcessor {
     if (this.inputView.length === 0) this._refreshViews();
 
     if (this.globalBypassed) {
-      // Pass-through: copy input channels directly to output (preserve stereo).
+      // Pass-through: copy input channels to output (stereo aware).
       for (let ch = 0; ch < output.length; ch++) {
         const inCh = input && input[Math.min(ch, (input.length || 1) - 1)];
         if (inCh && inCh.length > 0) output[ch].set(inCh);
@@ -160,33 +170,35 @@ class DspProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    // 1. Fill inputView from file playback (or silence).
+    // 1. Fill inputView (L) and inputRView (R) from the audio input.
     if (input && input.length > 0 && input[0] && input[0].length > 0) {
       const ch0 = input[0];
+      this.inputView.set(ch0);
       if (input.length > 1 && input[1] && input[1].length > 0) {
-        const ch1 = input[1];
-        for (let i = 0; i < RENDER_QUANTUM; i++) {
-          this.inputView[i] = (ch0[i] + ch1[i]) * 0.5;
-        }
+        this.inputRView.set(input[1]);
       } else {
-        this.inputView.set(ch0);
+        // Mono source — mirror left into right.
+        this.inputRView.set(ch0);
       }
     } else {
       this.inputView.fill(0);
+      this.inputRView.fill(0);
     }
 
-    // 2. Mix in synth additively so file + synth play simultaneously.
+    // 2. Mix synth into both channels additively.
     if (this.synthMode && this.synthPtr !== 0) {
       this.wasm.synth_process(this.synthPtr, this.synthBufPtr, RENDER_QUANTUM);
       for (let i = 0; i < RENDER_QUANTUM; i++) {
-        this.inputView[i] += this.synthBufView[i];
+        this.inputView[i]  += this.synthBufView[i];
+        this.inputRView[i] += this.synthBufView[i];
       }
     }
 
-    const rc = this.wasm.process(
+    // 3. Process stereo through the effect chain.
+    const rc = this.wasm.process_stereo(
       this.enginePtr,
-      this.inputPtr,
-      this.outputPtr,
+      this.inputPtr,  this.inputRPtr,
+      this.outputPtr, this.outputRPtr,
       RENDER_QUANTUM,
     );
     if (rc !== 0) {
@@ -194,9 +206,9 @@ class DspProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    for (let ch = 0; ch < output.length; ch++) {
-      output[ch].set(this.outputView);
-    }
+    // 4. Write L and R to respective output channels.
+    output[0].set(this.outputView);
+    if (output.length > 1) output[1].set(this.outputRView);
 
     this.localBlockCount++;
     if (this.localBlockCount % STATS_EVERY_N_BLOCKS === 0) {
@@ -204,19 +216,20 @@ class DspProcessor extends AudioWorkletProcessor {
       let outSumSq = 0;
       let outPeak = 0;
       for (let i = 0; i < RENDER_QUANTUM; i++) {
-        const inS = this.inputView[i];
-        const outS = this.outputView[i];
-        inSumSq += inS * inS;
+        // Average L+R for RMS; max of L/R for peak.
+        const inS  = (this.inputView[i]  + this.inputRView[i])  * 0.5;
+        const outS = (this.outputView[i] + this.outputRView[i]) * 0.5;
+        inSumSq  += inS * inS;
         outSumSq += outS * outS;
-        const a = outS < 0 ? -outS : outS;
+        const aL = this.outputView[i]  < 0 ? -this.outputView[i]  : this.outputView[i];
+        const aR = this.outputRView[i] < 0 ? -this.outputRView[i] : this.outputRView[i];
+        const a = aL > aR ? aL : aR;
         if (a > outPeak) outPeak = a;
       }
-      // Snapshot per-effect primary meters (compressor GR, etc.).
+      // Per-effect meters.
       const count = this.wasm.engine_collect_meters(
-        this.enginePtr,
-        0,
-        this.meterIdsPtr,
-        this.meterValsPtr,
+        this.enginePtr, 0,
+        this.meterIdsPtr, this.meterValsPtr,
         MAX_METER_SLOTS,
       );
       const effectMeters = new Array(count);
@@ -226,7 +239,7 @@ class DspProcessor extends AudioWorkletProcessor {
       this.port.postMessage({
         type: 'stats',
         blocksProcessed: this.localBlockCount,
-        inputRms: Math.sqrt(inSumSq / RENDER_QUANTUM),
+        inputRms:  Math.sqrt(inSumSq  / RENDER_QUANTUM),
         outputRms: Math.sqrt(outSumSq / RENDER_QUANTUM),
         outputPeak: outPeak,
         effectMeters,

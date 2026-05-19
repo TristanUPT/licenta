@@ -66,6 +66,21 @@ function buildArpSeq(notes: Set<number>, mode: ArpMode, octaves: number): number
   }
 }
 
+// ─── Chord mode ───────────────────────────────────────────────────────────────
+
+interface ChordType { label: string; labelRo: string; intervals: number[] }
+
+const CHORD_TYPES: Record<string, ChordType> = {
+  'maj':  { label: 'Maj',  labelRo: 'Maj',  intervals: [0, 4, 7]     },
+  'min':  { label: 'Min',  labelRo: 'Min',  intervals: [0, 3, 7]     },
+  '7':    { label: '7',    labelRo: '7',    intervals: [0, 4, 7, 10] },
+  'maj7': { label: 'M7',   labelRo: 'M7',   intervals: [0, 4, 7, 11] },
+  'min7': { label: 'm7',   labelRo: 'm7',   intervals: [0, 3, 7, 10] },
+  'sus4': { label: 'Sus4', labelRo: 'Sus4', intervals: [0, 5, 7]     },
+  'dim':  { label: 'Dim',  labelRo: 'Dim',  intervals: [0, 3, 6]     },
+  'aug':  { label: 'Aug',  labelRo: 'Aug',  intervals: [0, 4, 8]     },
+}
+
 // ─── Synth patches ────────────────────────────────────────────────────────────
 
 interface Patch {
@@ -238,6 +253,14 @@ export function SynthLab() {
   const arpGate       = useSynthStore((s) => s.arpGate)
   const setArpGate    = useSynthStore((s) => s.setArpGate)
 
+  // ── Chord mode ──
+  const [chordEnabled, setChordEnabled] = useState(false)
+  const [chordType,    setChordType]    = useState('maj')
+  const chordEnabledRef = useRef(chordEnabled)
+  chordEnabledRef.current = chordEnabled
+  const chordTypeRef = useRef(chordType)
+  chordTypeRef.current = chordType
+
   // ── Visual state ──
   const [activeNote, setActiveNote] = useState<number | null>(null)
   const [arpQueuedNotes, setArpQueuedNotes] = useState<Set<number>>(new Set())
@@ -283,6 +306,32 @@ export function SynthLab() {
   const noteOffAllRef = useRef(noteOffAll)
   noteOffAllRef.current = noteOffAll
 
+  // Chord-aware wrappers — reads refs so they're safe to call from effects/closures.
+  const chordNoteOnRef  = useRef<(root: number) => void>(null!)
+  const chordNoteOffRef = useRef<(root: number) => void>(null!)
+  chordNoteOnRef.current = (root: number) => {
+    if (!chordEnabledRef.current) {
+      noteOnRef.current(root, midiToFreq(root))
+      return
+    }
+    const intervals = CHORD_TYPES[chordTypeRef.current]?.intervals ?? [0]
+    for (const interval of intervals) {
+      const m = root + interval
+      if (m >= 0 && m <= 127) noteOnRef.current(m, midiToFreq(m))
+    }
+  }
+  chordNoteOffRef.current = (root: number) => {
+    if (!chordEnabledRef.current) {
+      noteOffRef.current(root)
+      return
+    }
+    const intervals = CHORD_TYPES[chordTypeRef.current]?.intervals ?? [0]
+    for (const interval of intervals) {
+      const m = root + interval
+      if (m >= 0 && m <= 127) noteOffRef.current(m)
+    }
+  }
+
   function handleNoteOn(midi: number) {
     if (!active) return
     if (arpEnabledRef.current) {
@@ -291,7 +340,7 @@ export function SynthLab() {
       arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
       if (arpNotesRef.current.size === 1) arpStepRef.current = 0
     } else {
-      noteOnRef.current(midi, midiToFreq(midi))
+      chordNoteOnRef.current(midi)
       setActiveNote(midi)
       activeNoteRef.current = midi
     }
@@ -311,7 +360,7 @@ export function SynthLab() {
       }
     } else {
       if (activeNoteRef.current === midi) {
-        noteOffRef.current(midi)
+        chordNoteOffRef.current(midi)
         setActiveNote(null)
         activeNoteRef.current = null
       }
@@ -335,7 +384,7 @@ export function SynthLab() {
         arpSeqRef.current = buildArpSeq(arpNotesRef.current, arpModeRef.current, arpOctavesRef.current)
         if (arpNotesRef.current.size === 1) arpStepRef.current = 0
       } else {
-        noteOnRef.current(midi, midiToFreq(midi))
+        chordNoteOnRef.current(midi)
         setActiveNote(midi)
         activeNoteRef.current = midi
       }
@@ -359,7 +408,7 @@ export function SynthLab() {
         }
       } else {
         if (heldKeys.current.size === 0) {
-          noteOffRef.current(midi)
+          chordNoteOffRef.current(midi)
           setActiveNote(null)
           activeNoteRef.current = null
         } else if (activeNoteRef.current === midi) {
@@ -368,7 +417,7 @@ export function SynthLab() {
           const lastOffset = KEY_OFFSETS[codes[codes.length - 1] ?? '']
           if (lastOffset !== undefined) {
             const lastMidi = effectiveStartRef.current + lastOffset
-            noteOnRef.current(lastMidi, midiToFreq(lastMidi))
+            chordNoteOnRef.current(lastMidi)
             setActiveNote(lastMidi)
             activeNoteRef.current = lastMidi
           }
@@ -423,13 +472,13 @@ export function SynthLab() {
           clearTimeout(gateTimeoutRef.current)
           gateTimeoutRef.current = null
         }
-        noteOnRef.current(midi, midiToFreq(midi))
+        chordNoteOnRef.current(midi)
         setActiveNote(midi)
         activeNoteRef.current = midi
         if (arpGateRef.current < 0.99) {
           const gateMidi = midi   // capture for the timeout closure
           gateTimeoutRef.current = setTimeout(() => {
-            noteOffRef.current(gateMidi)
+            chordNoteOffRef.current(gateMidi)
             gateTimeoutRef.current = null
           }, intervalMs * arpGateRef.current)
         }
@@ -819,6 +868,52 @@ export function SynthLab() {
               : 'Hold keys or click piano keys — the arpeggiator will loop through them'}
           </p>
         )}
+      </div>
+
+      {/* ── Chord mode ── */}
+      <div className={`mt-3 rounded-xl border px-3 py-2.5 transition-colors ${
+        chordEnabled
+          ? 'border-indigo-500/40 bg-indigo-500/5'
+          : 'border-zinc-800 bg-zinc-900/40'
+      }`}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button
+            onClick={() => setChordEnabled(!chordEnabled)}
+            disabled={!active}
+            aria-pressed={chordEnabled}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition disabled:opacity-40 ${
+              chordEnabled
+                ? 'bg-indigo-600 text-white hover:bg-indigo-500'
+                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${chordEnabled ? 'bg-white' : 'bg-zinc-600'}`} />
+            CHORD
+          </button>
+          <div className="flex flex-wrap items-center gap-1">
+            {Object.entries(CHORD_TYPES).map(([key, ct]) => (
+              <button
+                key={key}
+                onClick={() => setChordType(key)}
+                className={`rounded px-2 py-0.5 text-[10px] font-semibold transition ${
+                  chordType === key
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                }`}
+              >
+                {ro ? ct.labelRo : ct.label}
+              </button>
+            ))}
+          </div>
+          {chordEnabled && (
+            <span className="text-[9px] text-indigo-400/70">
+              {(CHORD_TYPES[chordType]?.intervals ?? []).map((i) => {
+                const names = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7']
+                return names[i] ?? i
+              }).join(' – ')}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Pitch wheel + Piano keyboard */}

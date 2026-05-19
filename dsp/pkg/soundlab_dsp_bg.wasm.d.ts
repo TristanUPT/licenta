@@ -15,6 +15,7 @@ export const engine_set_bypass: (a: number, b: number, c: number) => number;
 export const engine_set_param: (a: number, b: number, c: number, d: number) => number;
 export const get_blocks_processed: (a: number) => bigint;
 export const process: (a: number, b: number, c: number, d: number) => number;
+export const process_stereo: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
 export const synth_note_off: (a: number, b: number) => void;
 export const synth_note_on: (a: number, b: number, c: number) => void;
 export const synth_process: (a: number, b: number, c: number) => void;

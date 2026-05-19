@@ -19,6 +19,7 @@ export interface InitOutput {
     readonly engine_set_param: (a: number, b: number, c: number, d: number) => number;
     readonly get_blocks_processed: (a: number) => bigint;
     readonly process: (a: number, b: number, c: number, d: number) => number;
+    readonly process_stereo: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly synth_note_off: (a: number, b: number) => void;
     readonly synth_note_on: (a: number, b: number, c: number) => void;
     readonly synth_process: (a: number, b: number, c: number) => void;
