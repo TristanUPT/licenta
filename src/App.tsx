@@ -113,10 +113,8 @@ function App() {
                 <Switch.Thumb className="block h-4 w-4 translate-x-0.5 rounded-full bg-zinc-200 shadow transition-transform will-change-transform data-[state=checked]:translate-x-[22px]" />
               </Switch.Root>
               <span className="w-14 text-zinc-300 sm:w-16">
-                {mode === 'beginner' ? 'Beg.' : 'Adv.'}
-                <span className="hidden sm:inline">
-                  {mode === 'beginner' ? 'inner' : 'anced'}
-                </span>
+                <span className="sm:hidden">{mode === 'beginner' ? 'Beg.' : 'Adv.'}</span>
+                <span className="hidden sm:inline">{mode === 'beginner' ? 'Beginner' : 'Advanced'}</span>
               </span>
             </div>
 

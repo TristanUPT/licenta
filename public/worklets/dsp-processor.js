@@ -27,6 +27,8 @@ class DspProcessor extends AudioWorkletProcessor {
     // Synth state
     this.synthPtr = 0;
     this.synthMode = false;
+    this.synthBufPtr = 0;
+    this.synthBufView = null;
 
     this.port.onmessage = (event) => this._onMessage(event.data);
     this.port.postMessage({ type: 'hello' });
@@ -107,6 +109,7 @@ class DspProcessor extends AudioWorkletProcessor {
 
     this.inputPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.outputPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
+    this.synthBufPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.meterIdsPtr = this.wasm.alloc_u32(MAX_METER_SLOTS);
     this.meterValsPtr = this.wasm.alloc_f32(MAX_METER_SLOTS);
     this.enginePtr = this.wasm.create_engine(sampleRate);
@@ -131,9 +134,10 @@ class DspProcessor extends AudioWorkletProcessor {
 
   _refreshViews() {
     const buffer = this.wasm.memory.buffer;
-    this.inputView = new Float32Array(buffer, this.inputPtr, RENDER_QUANTUM);
-    this.outputView = new Float32Array(buffer, this.outputPtr, RENDER_QUANTUM);
-    this.meterIdsView = new Uint32Array(buffer, this.meterIdsPtr, MAX_METER_SLOTS);
+    this.inputView    = new Float32Array(buffer, this.inputPtr,    RENDER_QUANTUM);
+    this.outputView   = new Float32Array(buffer, this.outputPtr,   RENDER_QUANTUM);
+    this.synthBufView = new Float32Array(buffer, this.synthBufPtr, RENDER_QUANTUM);
+    this.meterIdsView = new Uint32Array(buffer,  this.meterIdsPtr, MAX_METER_SLOTS);
     this.meterValsView = new Float32Array(buffer, this.meterValsPtr, MAX_METER_SLOTS);
   }
 
@@ -156,10 +160,8 @@ class DspProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    // Synth mode: fill inputView from Rust synth, ignoring file source.
-    if (this.synthMode && this.synthPtr !== 0) {
-      this.wasm.synth_process(this.synthPtr, this.inputPtr, RENDER_QUANTUM);
-    } else if (input && input.length > 0 && input[0] && input[0].length > 0) {
+    // 1. Fill inputView from file playback (or silence).
+    if (input && input.length > 0 && input[0] && input[0].length > 0) {
       const ch0 = input[0];
       if (input.length > 1 && input[1] && input[1].length > 0) {
         const ch1 = input[1];
@@ -171,6 +173,14 @@ class DspProcessor extends AudioWorkletProcessor {
       }
     } else {
       this.inputView.fill(0);
+    }
+
+    // 2. Mix in synth additively so file + synth play simultaneously.
+    if (this.synthMode && this.synthPtr !== 0) {
+      this.wasm.synth_process(this.synthPtr, this.synthBufPtr, RENDER_QUANTUM);
+      for (let i = 0; i < RENDER_QUANTUM; i++) {
+        this.inputView[i] += this.synthBufView[i];
+      }
     }
 
     const rc = this.wasm.process(

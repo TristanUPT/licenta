@@ -127,6 +127,9 @@ export async function start(): Promise<void> {
       newNode.port.postMessage(initMsg, [wasmBytes])
       await readyPromise
 
+      // Connect permanently so the worklet renders even without file playback
+      // (synth-only mode, meter updates, etc.). Repeated connect() is a no-op.
+      newNode.connect(ctx.destination)
       node = newNode
     }
 
