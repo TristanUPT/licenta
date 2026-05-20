@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   useSynthStore, SYNTH_PARAM, OSC_TYPES, FILTER_TYPES,
-  ARP_MODES, ARP_DIVISIONS, type ArpMode, type SavedPatch,
+  ARP_MODES, ARP_DIVISIONS, FACTORY_SYNTH_PATCHES, type ArpMode, type SavedPatch,
 } from '@/store/synthStore'
 import { useEducationStore } from '@/store/educationStore'
 import { useMidi } from '@/hooks/useMidi'
@@ -83,22 +83,40 @@ const CHORD_TYPES: Record<string, ChordType> = {
 
 // ─── Synth patches ────────────────────────────────────────────────────────────
 
-interface Patch {
-  name: string; nameRo: string
-  oscType: number; detuneCents: number
-  attackMs: number; decayMs: number; sustain: number; releaseMs: number
-  filterType: number; cutoffHz: number; resonance: number
-  lfoRate: number; lfoDepth: number; gainDb: number
-}
+// ─── ADSR shape visualiser ────────────────────────────────────────────────────
 
-const PATCHES: Patch[] = [
-  { name: 'Init',    nameRo: 'Init',   oscType: 1, detuneCents: 0,  attackMs: 10,  decayMs: 200, sustain: 0.7, releaseMs: 400,  filterType: 0, cutoffHz: 4000, resonance: 0.0, lfoRate: 2,   lfoDepth: 0,    gainDb: -6 },
-  { name: 'Pluck',   nameRo: 'Pluck',  oscType: 1, detuneCents: 5,  attackMs: 2,   decayMs: 150, sustain: 0.0, releaseMs: 120,  filterType: 0, cutoffHz: 3000, resonance: 0.3, lfoRate: 2,   lfoDepth: 0,    gainDb: -6 },
-  { name: 'Pad',     nameRo: 'Pad',    oscType: 0, detuneCents: 8,  attackMs: 500, decayMs: 300, sustain: 0.8, releaseMs: 1500, filterType: 0, cutoffHz: 2000, resonance: 0.1, lfoRate: 0.5, lfoDepth: 0.3,  gainDb: -8 },
-  { name: 'Lead',    nameRo: 'Lead',   oscType: 2, detuneCents: 0,  attackMs: 5,   decayMs: 100, sustain: 0.8, releaseMs: 200,  filterType: 0, cutoffHz: 6000, resonance: 0.5, lfoRate: 5,   lfoDepth: 0.2,  gainDb: -6 },
-  { name: 'Bass',    nameRo: 'Bass',   oscType: 1, detuneCents: 3,  attackMs: 5,   decayMs: 250, sustain: 0.6, releaseMs: 150,  filterType: 0, cutoffHz: 800,  resonance: 0.4, lfoRate: 2,   lfoDepth: 0,    gainDb: -4 },
-  { name: 'Strings', nameRo: 'Corzi',  oscType: 1, detuneCents: 12, attackMs: 200, decayMs: 400, sustain: 0.7, releaseMs: 800,  filterType: 0, cutoffHz: 3500, resonance: 0.2, lfoRate: 3,   lfoDepth: 0.15, gainDb: -7 },
-]
+function AdsrShape({ attackMs, decayMs, sustain, releaseMs }: {
+  attackMs: number; decayMs: number; sustain: number; releaseMs: number
+}) {
+  const W = 120; const H = 40; const PAD = 4
+  const inner = W - PAD * 2
+  // Map each phase to proportional width using log scale.
+  const total = Math.log(attackMs + 1) + Math.log(decayMs + 1) + Math.log(releaseMs + 1) + 20
+  const a = (Math.log(attackMs + 1) / total) * inner
+  const d = (Math.log(decayMs  + 1) / total) * inner
+  const r = (Math.log(releaseMs + 1) / total) * inner
+  const s = inner - a - d - r   // sustain segment width
+
+  const top = PAD; const bot = H - PAD
+  const sLevel = bot - sustain * (bot - top)
+
+  const x0 = PAD
+  const x1 = x0 + a   // end of attack
+  const x2 = x1 + d   // end of decay
+  const x3 = x2 + s   // end of sustain
+  const x4 = x3 + r   // end of release
+
+  const d_attr = `M${x0},${bot} L${x1},${top} L${x2},${sLevel} L${x3},${sLevel} L${x4},${bot}`
+
+  return (
+    <svg width={W} height={H} className="shrink-0">
+      <path d={d_attr} fill="none" stroke="#a855f7" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      <line x1={x1} y1={top} x2={x1} y2={bot} stroke="#52525b" strokeWidth={0.5} strokeDasharray="2,2" />
+      <line x1={x2} y1={sLevel} x2={x2} y2={bot} stroke="#52525b" strokeWidth={0.5} strokeDasharray="2,2" />
+      <line x1={x3} y1={sLevel} x2={x3} y2={bot} stroke="#52525b" strokeWidth={0.5} strokeDasharray="2,2" />
+    </svg>
+  )
+}
 
 // ─── Vertical slider ──────────────────────────────────────────────────────────
 
@@ -201,14 +219,16 @@ export function SynthLab() {
   // ── Synth params ──
   const active        = useSynthStore((s) => s.active)
   const oscType       = useSynthStore((s) => s.oscType)
+  const osc2Type      = useSynthStore((s) => s.osc2Type)
   const detuneCents   = useSynthStore((s) => s.detuneCents)
   const attackMs      = useSynthStore((s) => s.attackMs)
   const decayMs       = useSynthStore((s) => s.decayMs)
   const sustain       = useSynthStore((s) => s.sustain)
   const releaseMs     = useSynthStore((s) => s.releaseMs)
-  const filterType    = useSynthStore((s) => s.filterType)
-  const cutoffHz      = useSynthStore((s) => s.cutoffHz)
-  const resonance     = useSynthStore((s) => s.resonance)
+  const filterType       = useSynthStore((s) => s.filterType)
+  const cutoffHz         = useSynthStore((s) => s.cutoffHz)
+  const resonance        = useSynthStore((s) => s.resonance)
+  const filterEnvAmount  = useSynthStore((s) => s.filterEnvAmount)
   const lfoRate       = useSynthStore((s) => s.lfoRate)
   const lfoDepth      = useSynthStore((s) => s.lfoDepth)
   const gainDb        = useSynthStore((s) => s.gainDb)
@@ -217,14 +237,16 @@ export function SynthLab() {
   const startSynth    = useSynthStore((s) => s.startSynth)
   const stopSynth     = useSynthStore((s) => s.stopSynth)
   const setOscType    = useSynthStore((s) => s.setOscType)
+  const setOsc2Type   = useSynthStore((s) => s.setOsc2Type)
   const setDetune     = useSynthStore((s) => s.setDetune)
   const setAttack     = useSynthStore((s) => s.setAttack)
   const setDecay      = useSynthStore((s) => s.setDecay)
   const setSustain    = useSynthStore((s) => s.setSustain)
   const setRelease    = useSynthStore((s) => s.setRelease)
-  const setFilterType = useSynthStore((s) => s.setFilterType)
-  const setCutoff     = useSynthStore((s) => s.setCutoff)
-  const setResonance  = useSynthStore((s) => s.setResonance)
+  const setFilterType      = useSynthStore((s) => s.setFilterType)
+  const setCutoff          = useSynthStore((s) => s.setCutoff)
+  const setResonance       = useSynthStore((s) => s.setResonance)
+  const setFilterEnvAmount = useSynthStore((s) => s.setFilterEnvAmount)
   const setLfoRate    = useSynthStore((s) => s.setLfoRate)
   const setLfoDepth   = useSynthStore((s) => s.setLfoDepth)
   const setGain       = useSynthStore((s) => s.setGain)
@@ -578,18 +600,12 @@ export function SynthLab() {
     setTimeout(() => setTapFlash(false), 100)
   }
 
-  function loadPatch(p: Patch) {
-    setOscType(p.oscType);    setDetune(p.detuneCents)
-    setAttack(p.attackMs);   setDecay(p.decayMs);  setSustain(p.sustain);  setRelease(p.releaseMs)
+  function loadPatch(p: SavedPatch) {
+    setOscType(p.oscType);     setOsc2Type(p.osc2Type ?? p.oscType); setDetune(p.detuneCents)
+    setAttack(p.attackMs);     setDecay(p.decayMs);  setSustain(p.sustain);  setRelease(p.releaseMs)
     setFilterType(p.filterType); setCutoff(p.cutoffHz); setResonance(p.resonance)
-    setLfoRate(p.lfoRate);   setLfoDepth(p.lfoDepth); setGain(p.gainDb)
-  }
-
-  function loadSavedPatch(p: SavedPatch) {
-    setOscType(p.oscType);    setDetune(p.detuneCents)
-    setAttack(p.attackMs);   setDecay(p.decayMs);  setSustain(p.sustain);  setRelease(p.releaseMs)
-    setFilterType(p.filterType); setCutoff(p.cutoffHz); setResonance(p.resonance)
-    setLfoRate(p.lfoRate);   setLfoDepth(p.lfoDepth); setGain(p.gainDb)
+    setFilterEnvAmount(p.filterEnvAmount ?? 0)
+    setLfoRate(p.lfoRate);     setLfoDepth(p.lfoDepth); setGain(p.gainDb)
   }
 
   function handleSavePatch() {
@@ -697,13 +713,13 @@ export function SynthLab() {
           <span className="shrink-0 pr-1 text-[9px] uppercase tracking-wider text-zinc-600">
             {ro ? 'Fabr:' : 'Factory:'}
           </span>
-          {PATCHES.map((p) => (
+          {FACTORY_SYNTH_PATCHES.map((p) => (
             <button
-              key={p.name}
+              key={p.id}
               onClick={() => loadPatch(p)}
               className="shrink-0 rounded-md bg-zinc-800 px-2.5 py-1 text-[10px] font-medium text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-100"
             >
-              {ro ? p.nameRo : p.name}
+              {p.name}
             </button>
           ))}
         </div>
@@ -716,7 +732,7 @@ export function SynthLab() {
           {savedPatches.map((p) => (
             <span key={p.id} className="flex shrink-0 items-center overflow-hidden rounded-md bg-indigo-900/40 text-[10px]">
               <button
-                onClick={() => loadSavedPatch(p)}
+                onClick={() => loadPatch(p)}
                 className="px-2.5 py-1 font-medium text-indigo-300 transition hover:text-indigo-100"
               >{p.name}</button>
               <button
@@ -749,16 +765,28 @@ export function SynthLab() {
       {/* Controls */}
       <div className="flex flex-wrap gap-5">
 
-        {/* Oscillator + Detune */}
+        {/* Oscillators + Detune */}
         <div className="flex flex-col gap-2">
           <p className="text-[9px] uppercase tracking-wider text-zinc-500">
-            {ro ? 'Oscilator' : 'Oscillator'}
+            {ro ? 'Oscilator 1' : 'Oscillator 1'}
           </p>
           <div className="flex flex-wrap gap-1">
             {OSC_TYPES.map((t) => (
               <button key={t.id} onClick={() => setOscType(t.id)}
                 className={`rounded px-2 py-1 text-[10px] font-semibold transition ${
                   oscType === t.id ? 'bg-purple-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                }`}
+              >{t.label}</button>
+            ))}
+          </div>
+          <p className="text-[9px] uppercase tracking-wider text-zinc-500 mt-1">
+            {ro ? 'Oscilator 2' : 'Oscillator 2'}
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {OSC_TYPES.map((t) => (
+              <button key={t.id} onClick={() => setOsc2Type(t.id)}
+                className={`rounded px-2 py-1 text-[10px] font-semibold transition ${
+                  osc2Type === t.id ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                 }`}
               >{t.label}</button>
             ))}
@@ -772,6 +800,7 @@ export function SynthLab() {
         {/* ADSR */}
         <div className="flex flex-col gap-2">
           <p className="text-[9px] uppercase tracking-wider text-zinc-500">ADSR</p>
+          <AdsrShape attackMs={attackMs} decayMs={decayMs} sustain={sustain} releaseMs={releaseMs} />
           <div className="flex gap-3">
             <Slider label="A" value={attackMs}  min={1}   max={2000} log format={(v) => `${v.toFixed(0)}ms`} onChange={setAttack}  />
             <Slider label="D" value={decayMs}   min={1}   max={2000} log format={(v) => `${v.toFixed(0)}ms`} onChange={setDecay}   />
@@ -797,6 +826,8 @@ export function SynthLab() {
               format={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v.toFixed(0)}`} onChange={setCutoff} />
             <Slider label="Res" value={resonance} min={0} max={0.95}
               format={(v) => `${Math.round(v * 100)}%`} onChange={setResonance} />
+            <Slider label="Env" value={filterEnvAmount} min={-4} max={4}
+              format={(v) => v === 0 ? 'off' : `${v > 0 ? '+' : ''}${v.toFixed(1)}oct`} onChange={setFilterEnvAmount} />
           </div>
         </div>
 

@@ -21,6 +21,8 @@ pub const SYNTH_PARAM_LFO_RATE:     u32 = 10;
 pub const SYNTH_PARAM_LFO_DEPTH:    u32 = 11;
 pub const SYNTH_PARAM_PITCH_BEND:   u32 = 12;  // semitones, range ±12
 pub const SYNTH_PARAM_MONO_MODE:    u32 = 13;  // 0 = polyphonic, 1 = monophonic
+pub const SYNTH_PARAM_OSC2_TYPE:    u32 = 14;  // same values as OSC_TYPE
+pub const SYNTH_PARAM_FILTER_ENV:   u32 = 15;  // octaves ±4, scales ADSR onto cutoff
 
 const MAX_VOICES: usize = 8;
 // Sentinel passed to note_off() to silence every active voice at once.
@@ -42,6 +44,8 @@ pub struct PolyEngine {
     age_counter:          u32,
     // Shared timbral params
     osc_type:             OscType,
+    osc2_type:            OscType,
+    filter_env_amount:    f32,
     detune_ratio:         f32,
     gain_lin:             f32,
     lfo_phase:            f32,
@@ -78,6 +82,8 @@ impl PolyEngine {
             voices,
             age_counter:          0,
             osc_type:             OscType::Saw,
+            osc2_type:            OscType::Saw,
+            filter_env_amount:    0.0,
             detune_ratio:         1.0,
             gain_lin:             db_to_lin(-6.0),
             lfo_phase:            0.0,
@@ -256,6 +262,12 @@ impl PolyEngine {
                     }
                 }
             }
+            SYNTH_PARAM_OSC2_TYPE => {
+                self.osc2_type = OscType::from_u32(value as u32);
+            }
+            SYNTH_PARAM_FILTER_ENV => {
+                self.filter_env_amount = value.clamp(-4.0, 4.0);
+            }
             _ => {}
         }
     }
@@ -276,15 +288,19 @@ impl PolyEngine {
             for v in &mut self.voices {
                 if !v.adsr.is_active() { continue; }
 
-                if self.lfo_depth > 1e-4 {
-                    let mod_cutoff = (self.base_cutoff * 2f32.powf(self.lfo_depth * lfo_sin))
-                        .clamp(20.0, 20_000.0);
+                let env = v.adsr.next_sample();
+
+                // Combine LFO modulation and filter envelope on cutoff.
+                let lfo_mod = if self.lfo_depth > 1e-4 { self.lfo_depth * lfo_sin } else { 0.0 };
+                let env_mod = self.filter_env_amount * env;
+                let total_mod = lfo_mod + env_mod;
+                if total_mod.abs() > 1e-6 {
+                    let mod_cutoff = (self.base_cutoff * 2f32.powf(total_mod)).clamp(20.0, 20_000.0);
                     v.filt.set_cutoff(mod_cutoff);
                 }
 
-                let env  = v.adsr.next_sample();
                 let osc1 = v.osc.next_sample(self.osc_type);
-                let osc2 = v.osc2.next_sample(self.osc_type);
+                let osc2 = v.osc2.next_sample(self.osc2_type);
                 mix += v.filt.process_sample((osc1 + osc2) * 0.5 * env);
             }
 
