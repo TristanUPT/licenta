@@ -20,6 +20,7 @@ pub const SYNTH_PARAM_DETUNE_CENTS: u32 = 9;
 pub const SYNTH_PARAM_LFO_RATE:     u32 = 10;
 pub const SYNTH_PARAM_LFO_DEPTH:    u32 = 11;
 pub const SYNTH_PARAM_PITCH_BEND:   u32 = 12;  // semitones, range ±12
+pub const SYNTH_PARAM_MONO_MODE:    u32 = 13;  // 0 = polyphonic, 1 = monophonic
 
 const MAX_VOICES: usize = 8;
 // Sentinel passed to note_off() to silence every active voice at once.
@@ -50,6 +51,7 @@ pub struct PolyEngine {
     resonance:            f32,
     filter_type:          FilterType,
     pitch_bend_semitones: f32,
+    mono_mode:            bool,
     // Stored ADSR params — applied to voices on note_on
     attack_ms:            f32,
     decay_ms:             f32,
@@ -85,6 +87,7 @@ impl PolyEngine {
             resonance:            0.0,
             filter_type:          FilterType::Low,
             pitch_bend_semitones: 0.0,
+            mono_mode:            false,
             attack_ms:            10.0,
             decay_ms:             200.0,
             sustain:              0.7,
@@ -94,11 +97,35 @@ impl PolyEngine {
 
     pub fn note_on(&mut self, midi: u32, freq_hz: f32) {
         let midi_u8 = midi as u8;
+        let bend    = 2f32.powf(self.pitch_bend_semitones / 12.0);
 
-        // If this MIDI note is already sounding, retrigger in-place.
+        if self.mono_mode {
+            // Mono: always use slot 0. Release all other active voices immediately.
+            for v in self.voices[1..].iter_mut() {
+                if v.adsr.is_active() { v.adsr.note_off(); }
+            }
+            let v = &mut self.voices[0];
+            v.base_freq = freq_hz;
+            v.osc.set_frequency((freq_hz / self.detune_ratio) * bend);
+            v.osc.reset_phase();
+            v.osc2.set_frequency((freq_hz * self.detune_ratio) * bend);
+            v.adsr.set_attack_ms(self.attack_ms);
+            v.adsr.set_decay_ms(self.decay_ms);
+            v.adsr.set_sustain(self.sustain);
+            v.adsr.set_release_ms(self.release_ms);
+            v.adsr.note_on();
+            v.filt.set_cutoff(self.base_cutoff);
+            v.filt.set_resonance(self.resonance);
+            v.filt.set_filter_type(self.filter_type);
+            v.midi = midi_u8;
+            self.age_counter += 1;
+            v.age = self.age_counter;
+            return;
+        }
+
+        // Poly: retrigger in-place if this MIDI note is already sounding.
         for v in &mut self.voices {
             if v.midi == midi_u8 && v.adsr.is_active() {
-                let bend = 2f32.powf(self.pitch_bend_semitones / 12.0);
                 v.base_freq = freq_hz;
                 v.osc.set_frequency((freq_hz / self.detune_ratio) * bend);
                 v.osc.reset_phase();
@@ -120,25 +147,19 @@ impl PolyEngine {
                 .unwrap_or(0)
         };
 
-        let bend = 2f32.powf(self.pitch_bend_semitones / 12.0);
-        let v    = &mut self.voices[slot];
-
+        let v = &mut self.voices[slot];
         v.base_freq = freq_hz;
         v.osc.set_frequency((freq_hz / self.detune_ratio) * bend);
         v.osc.reset_phase();
-        // osc2 phase NOT reset → offset gives chorus thickening on retrigger
         v.osc2.set_frequency((freq_hz * self.detune_ratio) * bend);
-
         v.adsr.set_attack_ms(self.attack_ms);
         v.adsr.set_decay_ms(self.decay_ms);
         v.adsr.set_sustain(self.sustain);
         v.adsr.set_release_ms(self.release_ms);
         v.adsr.note_on();
-
         v.filt.set_cutoff(self.base_cutoff);
         v.filt.set_resonance(self.resonance);
         v.filt.set_filter_type(self.filter_type);
-
         v.midi = midi_u8;
         self.age_counter += 1;
         v.age = self.age_counter;
@@ -152,10 +173,14 @@ impl PolyEngine {
             return;
         }
         let midi_u8 = midi as u8;
+        if self.mono_mode {
+            // In mono mode only slot 0 is used; only release it if it matches.
+            let v = &mut self.voices[0];
+            if v.midi == midi_u8 && v.adsr.is_active() { v.adsr.note_off(); }
+            return;
+        }
         for v in &mut self.voices {
-            if v.midi == midi_u8 && v.adsr.is_active() {
-                v.adsr.note_off();
-            }
+            if v.midi == midi_u8 && v.adsr.is_active() { v.adsr.note_off(); }
         }
     }
 
@@ -219,6 +244,15 @@ impl PolyEngine {
                     if v.adsr.is_active() {
                         v.osc.set_frequency((v.base_freq / self.detune_ratio) * bend);
                         v.osc2.set_frequency((v.base_freq * self.detune_ratio) * bend);
+                    }
+                }
+            }
+            SYNTH_PARAM_MONO_MODE => {
+                self.mono_mode = value >= 0.5;
+                // When switching to mono, silence voices 1..7 immediately.
+                if self.mono_mode {
+                    for v in self.voices[1..].iter_mut() {
+                        if v.adsr.is_active() { v.adsr.note_off(); }
                     }
                 }
             }

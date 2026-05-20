@@ -18,6 +18,7 @@ export const SYNTH_PARAM = {
   LFO_RATE:     10,
   LFO_DEPTH:    11,
   PITCH_BEND:   12,  // semitones ±12
+  MONO_MODE:    13,  // 0 = poly, 1 = mono
 } as const
 
 export const OSC_TYPES = [
@@ -35,6 +36,15 @@ export const FILTER_TYPES = [
 ] as const
 
 export type ArpMode = 'up' | 'down' | 'updown' | 'random'
+
+export interface SavedPatch {
+  id: string
+  name: string
+  oscType: number; detuneCents: number
+  attackMs: number; decayMs: number; sustain: number; releaseMs: number
+  filterType: number; cutoffHz: number; resonance: number
+  lfoRate: number; lfoDepth: number; gainDb: number
+}
 
 export const ARP_MODES: { id: ArpMode; label: string; labelRo: string }[] = [
   { id: 'up',     label: 'Up',   labelRo: 'Sus'  },
@@ -78,6 +88,11 @@ interface SynthState {
   arpDivision:  number   // 4 = quarter, 8 = eighth, 16 = sixteenth, 32 = thirty-second
   arpOctaves:   number   // 1 | 2 | 3
   arpGate:      number   // 0.1–1.0, note length as fraction of step interval
+  monoMode:     boolean
+  // User-saved patches
+  savedPatches:    SavedPatch[]
+  savePatch:       (name: string) => void
+  deleteSavedPatch:(id: string) => void
 
   startSynth: () => Promise<void>
   stopSynth:  () => void
@@ -100,6 +115,7 @@ interface SynthState {
   setArpDivision: (d: number) => void
   setArpOctaves:  (n: number) => void
   setArpGate:     (g: number) => void
+  setMonoMode:    (v: boolean) => void
   noteOn:     (midi: number, freqHz: number) => void
   noteOff:    (midi: number) => void
   noteOffAll: () => void
@@ -133,6 +149,7 @@ export const useSynthStore = create<SynthState>()(
         arpDivision:  8,
         arpOctaves:   1,
         arpGate:      0.8,
+        monoMode:     false,
 
         startSynth: async () => {
           if (getStatus().status !== 'running') await startEngine()
@@ -150,6 +167,7 @@ export const useSynthStore = create<SynthState>()(
           send(SYNTH_PARAM.LFO_DEPTH,    s.lfoDepth)
           send(SYNTH_PARAM.GAIN_DB,      s.gainDb)
           send(SYNTH_PARAM.DETUNE_CENTS, s.detuneCents)
+          send(SYNTH_PARAM.MONO_MODE,    s.monoMode ? 1 : 0)
           set({ active: true }, undefined, 'synth/start')
         },
 
@@ -177,6 +195,23 @@ export const useSynthStore = create<SynthState>()(
         setArpDivision:(d)  => { set({ arpDivision: d },       undefined, 'synth/arpDiv')                                         },
         setArpOctaves: (n)  => { set({ arpOctaves: n },        undefined, 'synth/arpOct')                                         },
         setArpGate:    (g)  => { set({ arpGate: g },           undefined, 'synth/arpGate')                                        },
+        setMonoMode:   (v)  => { set({ monoMode: v },          undefined, 'synth/monoMode'); send(SYNTH_PARAM.MONO_MODE, v ? 1 : 0) },
+
+        savedPatches: [],
+        savePatch: (name) => {
+          const s = get()
+          const patch: SavedPatch = {
+            id: `user:${Date.now()}`,
+            name: name.trim() || 'Untitled',
+            oscType: s.oscType, detuneCents: s.detuneCents,
+            attackMs: s.attackMs, decayMs: s.decayMs, sustain: s.sustain, releaseMs: s.releaseMs,
+            filterType: s.filterType, cutoffHz: s.cutoffHz, resonance: s.resonance,
+            lfoRate: s.lfoRate, lfoDepth: s.lfoDepth, gainDb: s.gainDb,
+          }
+          set((prev) => ({ savedPatches: [...prev.savedPatches, patch] }), undefined, 'synth/savePatch')
+        },
+        deleteSavedPatch: (id) =>
+          set((prev) => ({ savedPatches: prev.savedPatches.filter((p) => p.id !== id) }), undefined, 'synth/deletePatch'),
 
         noteOn:     (midi, freq) => { try { engine.synthNoteOn(midi, freq)  } catch { /* */ } },
         noteOff:    (midi)       => { try { engine.synthNoteOff(midi)       } catch { /* */ } },
@@ -191,6 +226,8 @@ export const useSynthStore = create<SynthState>()(
           lfoRate: s.lfoRate, lfoDepth: s.lfoDepth, gainDb: s.gainDb,
           octaveShift: s.octaveShift,
           arpMode: s.arpMode, arpBpm: s.arpBpm, arpDivision: s.arpDivision, arpOctaves: s.arpOctaves, arpGate: s.arpGate,
+          monoMode: s.monoMode,
+          savedPatches: s.savedPatches,
         }),
       },
     ),

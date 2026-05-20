@@ -182,6 +182,42 @@ const LESSONS: LessonContent[] = [
       en: ['Pitch Shift: transpose without tempo change', 'Tube = even harmonics (warm)', 'Tape = compression + warm (organic)', 'Clip = odd harmonics (aggressive)', 'Saturation < 5% = warmth; > 20% = distortion'],
     },
   },
+  {
+    icon: '🎹',
+    title: { ro: 'Bazele Sintezei Sunetului', en: 'Sound Synthesis Basics' },
+    body: {
+      ro: {
+        beginner:
+          'Sinteza sunetului înseamnă generarea de sunete noi din nimic — spre deosebire de efectele care modifică un sunet existent. SoundLab include un sintetizator substractiv cu 8 voci simultane. Oscilatorii generează unde sonore de diferite forme — Sine (pur, blând), Saw (ascuțit, bogat în armonice), Square (hohot electric, gol la mijloc), Triangle (blând dar mai luminos decât Sine), Noise (sunet de vânt/ocean). Filtrul LP taie frecvențele înalte, lăsând să treacă cele joase — Cutoff este frecvența de tăiere, Resonance amplifică frecvențele din jurul tăieturii. Înfășurătoarea ADSR controlează cum evoluează volumul în timp: Attack = cât de rapid crește, Decay = căderea spre Sustain, Sustain = nivelul ținut cât timp apeși tasta, Release = cum dispare după ce eliberezi.',
+        advanced:
+          'Sinteza substractivă: se pornește de la un semnal bogat în armonice (Saw, Square) și se sculptează cu filtre și înfășurători. Oscilator dual cu detuning (±50 ¢) creează bătăi de frecvență (chorus natural). SVF (State Variable Filter) implementat în Rust/WASM: modul LP/BP/HP comutabil, rezistență la aliasing la cutoff înaltă. LFO → Cutoff: modulare periodică (vibrato spectral). Voce polifonică 8-slot cu furt de voce prin vârstă (oldest-first). Arpegiorul implementat în frontend cu timer JavaScript — precizie suficientă la ≤ 16simi, nu audio-rate. Chord mode: 8 tipuri de acorduri (M, m, 7, M7, m7, sus4, dim, aug) cu declanșare simultană multi-voice. Pitch Bend: multiplicator de frecvență 2^(semitone/12), ±2 semitoane implicit.',
+      },
+      en: {
+        beginner:
+          'Sound synthesis means generating new sounds from nothing — unlike effects which modify an existing sound. SoundLab includes a subtractive synthesiser with 8 simultaneous voices. Oscillators generate waveforms of different shapes — Sine (pure, gentle), Saw (sharp, rich in harmonics), Square (hollow electric buzz), Triangle (gentler but brighter than Sine), Noise (wind/ocean sound). The LP filter cuts high frequencies, letting lows through — Cutoff is the cut frequency, Resonance amplifies frequencies around the cut. The ADSR envelope controls how volume evolves over time: Attack = how quickly it rises, Decay = fall toward Sustain, Sustain = held level while the key is pressed, Release = how it fades after you release.',
+        advanced:
+          'Subtractive synthesis: starts from a harmonically rich signal (Saw, Square) and sculpts it with filters and envelopes. Dual oscillator with detuning (±50 ¢) creates frequency beating (natural chorus). SVF (State Variable Filter) implemented in Rust/WASM: switchable LP/BP/HP mode, aliasing-resistant at high cutoff. LFO → Cutoff: periodic spectral modulation (filter vibrato). 8-slot polyphony with oldest-first voice stealing. Arpeggiator implemented in frontend via JavaScript timer — sufficient precision at ≤ 16th notes, not audio-rate. Chord mode: 8 chord types (M, m, 7, M7, m7, sus4, dim, aug) with simultaneous multi-voice triggering. Pitch Bend: frequency multiplier 2^(semitone/12), ±2 semitones default.',
+      },
+    },
+    keyPoints: {
+      ro: [
+        'Sine = frecvență pură; Saw = toate armonicele; Square = armonice impare',
+        'Filter Cutoff = frecvența de tăiere; Resonance = vârf rezonant',
+        'ADSR: Attack → Decay → Sustain (nivel) → Release',
+        'LFO modulează cutoff-ul periodic (vibrato/wah)',
+        'Arpegiatorul parcurge notele ținute în buclă la BPM ales',
+        'Chord mode declanșează simultan toate notele acordului',
+      ],
+      en: [
+        'Sine = pure frequency; Saw = all harmonics; Square = odd harmonics only',
+        'Filter Cutoff = cut frequency; Resonance = resonant peak',
+        'ADSR: Attack → Decay → Sustain (level) → Release',
+        'LFO modulates cutoff periodically (vibrato/wah effect)',
+        'Arpeggiator loops through held notes at chosen BPM',
+        'Chord mode triggers all chord notes simultaneously',
+      ],
+    },
+  },
 ]
 
 export function LessonsPanel() {

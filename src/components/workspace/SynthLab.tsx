@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   useSynthStore, SYNTH_PARAM, OSC_TYPES, FILTER_TYPES,
-  ARP_MODES, ARP_DIVISIONS, type ArpMode,
+  ARP_MODES, ARP_DIVISIONS, type ArpMode, type SavedPatch,
 } from '@/store/synthStore'
 import { useEducationStore } from '@/store/educationStore'
 import { useMidi } from '@/hooks/useMidi'
@@ -228,10 +228,15 @@ export function SynthLab() {
   const setLfoRate    = useSynthStore((s) => s.setLfoRate)
   const setLfoDepth   = useSynthStore((s) => s.setLfoDepth)
   const setGain       = useSynthStore((s) => s.setGain)
-  const setOctaveShift = useSynthStore((s) => s.setOctaveShift)
-  const noteOn        = useSynthStore((s) => s.noteOn)
-  const noteOff       = useSynthStore((s) => s.noteOff)
-  const noteOffAll    = useSynthStore((s) => s.noteOffAll)
+  const setOctaveShift   = useSynthStore((s) => s.setOctaveShift)
+  const noteOn           = useSynthStore((s) => s.noteOn)
+  const noteOff          = useSynthStore((s) => s.noteOff)
+  const noteOffAll       = useSynthStore((s) => s.noteOffAll)
+  const savedPatches     = useSynthStore((s) => s.savedPatches)
+  const savePatch        = useSynthStore((s) => s.savePatch)
+  const deleteSavedPatch = useSynthStore((s) => s.deleteSavedPatch)
+  const monoMode         = useSynthStore((s) => s.monoMode)
+  const setMonoMode      = useSynthStore((s) => s.setMonoMode)
 
   // ── WebMIDI ──
   const { devices: midiDevices, supported: midiSupported, permissionDenied: midiDenied } = useMidi({
@@ -254,6 +259,7 @@ export function SynthLab() {
   const setArpGate    = useSynthStore((s) => s.setArpGate)
 
   // ── Chord mode ──
+  const [patchName, setPatchName] = useState('')
   const [chordEnabled, setChordEnabled] = useState(false)
   const [chordType,    setChordType]    = useState('maj')
   const chordEnabledRef = useRef(chordEnabled)
@@ -371,7 +377,10 @@ export function SynthLab() {
   useEffect(() => {
     if (!active) return
     function onKeyDown(e: KeyboardEvent) {
-      if (e.repeat || e.target instanceof HTMLInputElement) return
+      if (e.repeat) return
+      const tgt = e.target as HTMLElement
+      if (tgt.tagName === 'TEXTAREA' || tgt.isContentEditable) return
+      if (tgt.tagName === 'INPUT' && (tgt as HTMLInputElement).type !== 'range') return
       const offset = KEY_OFFSETS[e.code]
       if (offset === undefined) return
       if (heldKeys.current.has(e.code)) return
@@ -531,6 +540,19 @@ export function SynthLab() {
     setOctaveShift(n)
   }
 
+  function handleMonoToggle(v: boolean) {
+    // Silence everything when switching modes to avoid stuck notes.
+    noteOffAllRef.current()
+    setActiveNote(null)
+    activeNoteRef.current = null
+    if (arpEnabledRef.current) {
+      arpNotesRef.current.clear()
+      syncArpDisplay()
+      arpSeqRef.current = []
+    }
+    setMonoMode(v)
+  }
+
   function handlePitchBend(cents: number) {
     setPitchBend(cents)
     try { synthSetParam(SYNTH_PARAM.PITCH_BEND, cents / 100) } catch { /* engine not ready */ }
@@ -561,6 +583,19 @@ export function SynthLab() {
     setAttack(p.attackMs);   setDecay(p.decayMs);  setSustain(p.sustain);  setRelease(p.releaseMs)
     setFilterType(p.filterType); setCutoff(p.cutoffHz); setResonance(p.resonance)
     setLfoRate(p.lfoRate);   setLfoDepth(p.lfoDepth); setGain(p.gainDb)
+  }
+
+  function loadSavedPatch(p: SavedPatch) {
+    setOscType(p.oscType);    setDetune(p.detuneCents)
+    setAttack(p.attackMs);   setDecay(p.decayMs);  setSustain(p.sustain);  setRelease(p.releaseMs)
+    setFilterType(p.filterType); setCutoff(p.cutoffHz); setResonance(p.resonance)
+    setLfoRate(p.lfoRate);   setLfoDepth(p.lfoDepth); setGain(p.gainDb)
+  }
+
+  function handleSavePatch() {
+    if (!patchName.trim()) return
+    savePatch(patchName)
+    setPatchName('')
   }
 
   function blackKeyLeft(midi: number): number {
@@ -626,6 +661,22 @@ export function SynthLab() {
             </div>
           )}
 
+          {/* Mono / Poly toggle */}
+          <button
+            onClick={() => handleMonoToggle(!monoMode)}
+            disabled={!active}
+            title={monoMode
+              ? (ro ? 'Trece la mod polifonic (8 voci)' : 'Switch to polyphonic mode (8 voices)')
+              : (ro ? 'Trece la mod monofonic (1 voce)' : 'Switch to monophonic mode (1 voice)')}
+            className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition disabled:opacity-40 ${
+              monoMode
+                ? 'bg-amber-600 text-white hover:bg-amber-500'
+                : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+            }`}
+          >
+            {monoMode ? 'MONO' : 'POLY'}
+          </button>
+
           {/* Start / Stop */}
           <button
             onClick={() => { active ? stopSynth() : void startSynth() }}
@@ -641,19 +692,58 @@ export function SynthLab() {
       </div>
 
       {/* Patch strip */}
-      <div className="mb-4 flex items-center gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
-        <span className="shrink-0 pr-1 text-[9px] uppercase tracking-wider text-zinc-600">
-          {ro ? 'Preset:' : 'Patch:'}
-        </span>
-        {PATCHES.map((p) => (
+      <div className="mb-4 space-y-1.5">
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+          <span className="shrink-0 pr-1 text-[9px] uppercase tracking-wider text-zinc-600">
+            {ro ? 'Fabr:' : 'Factory:'}
+          </span>
+          {PATCHES.map((p) => (
+            <button
+              key={p.name}
+              onClick={() => loadPatch(p)}
+              className="shrink-0 rounded-md bg-zinc-800 px-2.5 py-1 text-[10px] font-medium text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-100"
+            >
+              {ro ? p.nameRo : p.name}
+            </button>
+          ))}
+        </div>
+
+        {/* User patches row */}
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+          <span className="shrink-0 pr-1 text-[9px] uppercase tracking-wider text-zinc-600">
+            {ro ? 'Salvate:' : 'Saved:'}
+          </span>
+          {savedPatches.map((p) => (
+            <span key={p.id} className="flex shrink-0 items-center overflow-hidden rounded-md bg-indigo-900/40 text-[10px]">
+              <button
+                onClick={() => loadSavedPatch(p)}
+                className="px-2.5 py-1 font-medium text-indigo-300 transition hover:text-indigo-100"
+              >{p.name}</button>
+              <button
+                onClick={() => deleteSavedPatch(p.id)}
+                title={ro ? 'Șterge patch' : 'Delete patch'}
+                className="px-1.5 py-1 text-indigo-600 transition hover:text-red-400"
+              >×</button>
+            </span>
+          ))}
+          {/* Save current state */}
+          <input
+            type="text"
+            value={patchName}
+            onChange={(e) => setPatchName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSavePatch() }}
+            placeholder={ro ? 'Nume patch…' : 'Patch name…'}
+            className="w-24 rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-[10px] text-zinc-300 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none"
+          />
           <button
-            key={p.name}
-            onClick={() => loadPatch(p)}
-            className="shrink-0 rounded-md bg-zinc-800 px-2.5 py-1 text-[10px] font-medium text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-100"
+            onClick={handleSavePatch}
+            disabled={!patchName.trim()}
+            title={ro ? 'Salvează starea curentă ca patch' : 'Save current state as patch'}
+            className="shrink-0 rounded-md bg-indigo-700 px-2.5 py-1 text-[10px] font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {ro ? p.nameRo : p.name}
+            {ro ? 'Salvează' : 'Save'}
           </button>
-        ))}
+        </div>
       </div>
 
       {/* Controls */}
