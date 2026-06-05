@@ -33,3 +33,9 @@ coverage/
 
 # WASM build artifacts
 *.d.ts.map
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
