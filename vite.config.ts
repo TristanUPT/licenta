@@ -4,12 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 import wasm from 'vite-plugin-wasm'
 import path from 'path'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    wasm(),
-  ],
+  plugins: [react(), tailwindcss(), wasm(), cloudflare()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
