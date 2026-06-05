@@ -11,8 +11,6 @@ interface LevelMeterProps {
 }
 
 const COLOR_BG = '#0f0f12'
-const COLOR_RMS = '#a855f7'
-const COLOR_PEAK_HOT = '#22d3ee'
 const COLOR_CLIP = '#ef4444'
 
 function linToDb(lin: number): number {
@@ -70,14 +68,25 @@ export function LevelMeter({ height = 160, width = 28, minDb = -60 }: LevelMeter
       const rmsY = dbToY(st.rmsDb, minDb, height)
       const holdY = dbToY(st.holdDb, minDb, height)
 
+      // Build green→yellow→red gradient (bottom to top)
+      const grad = ctx.createLinearGradient(0, height, 0, 0)
+      grad.addColorStop(0, '#22c55e')
+      grad.addColorStop(0.7, '#eab308')
+      grad.addColorStop(0.9, '#ef4444')
+
       // Peak bar
-      const peakColor = st.peakDb > -0.1 ? COLOR_CLIP : COLOR_PEAK_HOT
-      ctx.fillStyle = peakColor
+      if (st.peakDb > -0.1) {
+        ctx.fillStyle = COLOR_CLIP
+      } else {
+        ctx.fillStyle = grad
+      }
       ctx.fillRect(2, peakY, width - 4, height - peakY)
 
-      // RMS bar (slightly inset)
-      ctx.fillStyle = COLOR_RMS
+      // RMS bar (slightly inset, same gradient but dimmer)
+      ctx.globalAlpha = 0.65
+      ctx.fillStyle = grad
       ctx.fillRect(6, rmsY, width - 12, height - rmsY)
+      ctx.globalAlpha = 1
 
       // Peak hold line
       ctx.fillStyle = '#fafafa'

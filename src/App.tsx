@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as Switch from '@radix-ui/react-switch'
 import { getStatus, subscribe, type EngineStatus } from '@/audio/engine'
+import { start as startEngine, getContext } from '@/audio/engine'
 import { useAudioStore } from '@/store/audioStore'
 import { useEducationStore } from '@/store/educationStore'
 import { usePresetStore } from '@/store/presetStore'
@@ -9,34 +10,27 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { KeyboardHint } from '@/components/workspace/KeyboardHint'
 import { OnboardingTutorial } from '@/components/workspace/OnboardingTutorial'
 import { SettingsPanel } from '@/components/workspace/SettingsPanel'
-import { FileDropZone } from '@/components/workspace/FileDropZone'
+import { BrowserSidebar } from '@/components/workspace/BrowserSidebar'
+import { InspectorSidebar } from '@/components/workspace/InspectorSidebar'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
-import { VisualizerPanel } from '@/components/visualization/VisualizerPanel'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
 import { SynthLab } from '@/components/workspace/SynthLab'
-import { InfoPanel } from '@/components/education/InfoPanel'
-import { RecommendationsPanel } from '@/components/education/RecommendationsPanel'
-import { LessonsPanel } from '@/components/education/LessonsPanel'
+import { decodeFile } from '@/audio/file-loader'
 
 const STATUS_DOT: Record<EngineStatus, string> = {
-  idle: 'bg-zinc-500',
-  starting: 'bg-amber-400',
+  idle: 'bg-zinc-600',
+  starting: 'bg-amber-400 animate-pulse',
   running: 'bg-emerald-500',
   error: 'bg-red-500',
 }
 
-interface PanelToggleProps {
-  label: string
-  active: boolean
-  onClick: () => void
-}
-
-function PanelToggle({ label, active, onClick }: PanelToggleProps) {
+interface PanelBtnProps { label: string; active: boolean; onClick: () => void }
+function PanelBtn({ label, active, onClick }: PanelBtnProps) {
   return (
     <button
       onClick={onClick}
-      className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition ${
+      className={`px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition ${
         active ? 'bg-zinc-700 text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'
       }`}
     >
@@ -55,6 +49,9 @@ function App() {
   useEffect(() => { void loadUserPresets() }, [loadUserPresets])
 
   const currentFile = useAudioStore((s) => s.currentFile)
+  const setFile     = useAudioStore((s) => s.setFile)
+  const setLoading  = useAudioStore((s) => s.setLoading)
+  const setError    = useAudioStore((s) => s.setError)
   const mode        = useEducationStore((s) => s.mode)
   const language    = useEducationStore((s) => s.language)
   const setMode     = useEducationStore((s) => s.setMode)
@@ -71,113 +68,174 @@ function App() {
   const toggleLessons    = useUiStore((s) => s.toggleLessons)
   const toggleSynthLab   = useUiStore((s) => s.toggleSynthLab)
 
-  const waveLabel    = language === 'ro' ? 'Waveform' : 'Waveform'
-  const vizLabel     = language === 'ro' ? 'Vizualizări' : 'Visualizers'
-  const eduLabel     = language === 'ro' ? 'Educație' : 'Education'
-  const lessonsLabel = language === 'ro' ? 'Lecții' : 'Lessons'
-  const synthLabel   = language === 'ro' ? 'Synth' : 'Synth'
+  /* ── Central drop zone (when no file loaded) ── */
+  const [dragActive, setDragActive] = useState(false)
+  const centerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleDroppedFile(file: File) {
+    setError(null); setLoading(true)
+    try {
+      if (getStatus().status !== 'running') await startEngine()
+      const ctx = getContext()
+      if (!ctx) throw new Error('AudioContext unavailable')
+      const audioBuffer = await decodeFile(file, ctx)
+      setFile(
+        { name: file.name, size: file.size, duration: audioBuffer.duration, sampleRate: audioBuffer.sampleRate, numberOfChannels: audioBuffer.numberOfChannels },
+        audioBuffer,
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally { setLoading(false) }
+  }
+
+  function onDragOver(e: React.DragEvent) { e.preventDefault(); setDragActive(true) }
+  function onDragLeave(e: React.DragEvent) { e.preventDefault(); setDragActive(false) }
+  async function onDrop(e: React.DragEvent) {
+    e.preventDefault(); setDragActive(false)
+    const file = e.dataTransfer.files[0]
+    if (file) await handleDroppedFile(file)
+  }
+
+  const ro = language === 'ro'
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-100">
-      <header className="border-b border-zinc-800 px-4 py-2 sm:px-6 sm:py-3">
-        {/* Top row: logo + engine status */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-baseline gap-2 sm:gap-3">
-            <h1 className="text-lg font-bold tracking-tight sm:text-xl">
-              Sound<span className="text-purple-500">Lab</span>
-            </h1>
-            <span className="hidden text-xs text-zinc-500 sm:inline">Mini-DAW Educațional</span>
-          </div>
+    <div className="flex h-screen flex-col overflow-hidden bg-zinc-950 text-zinc-100">
 
-          <div className="flex items-center gap-3 text-xs sm:gap-5">
-            {/* Panel toggles — hidden on small screens */}
-            <div className="hidden items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:flex">
-              {currentFile && <>
-                <PanelToggle label={waveLabel}    active={showWaveform}   onClick={toggleWaveform} />
-                <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
-                <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
-                <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
-              </>}
-              <PanelToggle label={synthLabel} active={showSynthLab} onClick={toggleSynthLab} />
-            </div>
-
-            {/* Mode toggle */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="hidden text-zinc-500 sm:inline">Mode</span>
-              <Switch.Root
-                checked={mode === 'advanced'}
-                onCheckedChange={(c) => setMode(c ? 'advanced' : 'beginner')}
-                aria-label="Toggle beginner / advanced mode"
-                className="relative h-5 w-10 cursor-pointer rounded-full bg-zinc-800 transition data-[state=checked]:bg-purple-600"
-              >
-                <Switch.Thumb className="block h-4 w-4 translate-x-0.5 rounded-full bg-zinc-200 shadow transition-transform will-change-transform data-[state=checked]:translate-x-[22px]" />
-              </Switch.Root>
-              <span className="w-14 text-zinc-300 sm:w-16">
-                <span className="sm:hidden">{mode === 'beginner' ? 'Beg.' : 'Adv.'}</span>
-                <span className="hidden sm:inline">{mode === 'beginner' ? 'Beginner' : 'Advanced'}</span>
-              </span>
-            </div>
-
-            {/* Language toggle */}
-            <div className="flex items-center gap-1 rounded-md border border-zinc-800 p-0.5">
-              <button
-                onClick={() => setLanguage('ro')}
-                className={`px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider transition ${
-                  language === 'ro' ? 'rounded bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
-                }`}
-              >RO</button>
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider transition ${
-                  language === 'en' ? 'rounded bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
-                }`}
-              >EN</button>
-            </div>
-
-            {/* Settings */}
-            <SettingsPanel />
-
-            {/* Engine status dot */}
-            <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
-          </div>
+      {/* ── Header ─────────────────────────────────────────── */}
+      <header className="flex h-10 shrink-0 items-center justify-between border-b border-zinc-800 px-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-sm font-bold tracking-tight">
+            Sound<span className="text-purple-400">Lab</span>
+          </h1>
+          <span className="hidden text-[10px] text-zinc-600 sm:inline">Mini-DAW Educațional</span>
         </div>
 
-        {/* Panel toggles on mobile — second row */}
-        <div className="mt-2 flex items-center gap-1 rounded-md border border-zinc-800 p-0.5 sm:hidden">
-          {currentFile && <>
-            <PanelToggle label={waveLabel}    active={showWaveform}   onClick={toggleWaveform} />
-            <PanelToggle label={vizLabel}     active={showVisualizer} onClick={toggleVisualizer} />
-            <PanelToggle label={eduLabel}     active={showEducation}  onClick={toggleEducation} />
-            <PanelToggle label={lessonsLabel} active={showLessons}    onClick={toggleLessons} />
-          </>}
-          <PanelToggle label={synthLabel} active={showSynthLab} onClick={toggleSynthLab} />
+        <div className="flex items-center gap-1.5">
+          {/* Panel toggles */}
+          <div className="hidden items-center divide-x divide-zinc-800 rounded border border-zinc-800 sm:flex">
+            {currentFile && (
+              <>
+                <PanelBtn label="Wave"                  active={showWaveform}   onClick={toggleWaveform} />
+                <PanelBtn label="Viz"                   active={showVisualizer} onClick={toggleVisualizer} />
+                <PanelBtn label={ro ? 'Edu' : 'Edu'}   active={showEducation}  onClick={toggleEducation} />
+                <PanelBtn label={ro ? 'Lecții' : 'Lessons'} active={showLessons} onClick={toggleLessons} />
+              </>
+            )}
+            <PanelBtn label="Synth" active={showSynthLab} onClick={toggleSynthLab} />
+          </div>
+
+          <div className="mx-1 hidden h-4 w-px bg-zinc-800 sm:block" />
+
+          {/* Beginner/Advanced */}
+          <div className="flex items-center gap-1.5">
+            <Switch.Root
+              checked={mode === 'advanced'}
+              onCheckedChange={(c) => setMode(c ? 'advanced' : 'beginner')}
+              aria-label="Toggle beginner / advanced mode"
+              className="relative h-4 w-8 cursor-pointer rounded-full bg-zinc-800 transition data-[state=checked]:bg-purple-600"
+            >
+              <Switch.Thumb className="block h-3 w-3 translate-x-0.5 rounded-full bg-zinc-300 shadow transition-transform will-change-transform data-[state=checked]:translate-x-[18px]" />
+            </Switch.Root>
+            <span className="hidden text-[10px] text-zinc-500 sm:inline">
+              {mode === 'beginner' ? 'Beginner' : 'Advanced'}
+            </span>
+          </div>
+
+          {/* Language */}
+          <div className="flex items-center divide-x divide-zinc-800 rounded border border-zinc-800">
+            <button onClick={() => setLanguage('ro')} className={`px-2 py-0.5 text-[10px] font-semibold uppercase transition ${language === 'ro' ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}>RO</button>
+            <button onClick={() => setLanguage('en')} className={`px-2 py-0.5 text-[10px] font-semibold uppercase transition ${language === 'en' ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}>EN</button>
+          </div>
+
+          <SettingsPanel />
+          <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} title={`Engine: ${status}`} />
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-8">
-        {currentFile ? (
-          <>
-            {showWaveform   && <WaveformView />}
-            {showVisualizer && <VisualizerPanel />}
-            {showEducation  && <InfoPanel />}
-            {showEducation  && <RecommendationsPanel />}
-            {showLessons    && <LessonsPanel />}
-          </>
-        ) : (
-          <FileDropZone />
-        )}
-        {showSynthLab && <SynthLab />}
-        <EffectsRack />
-      </main>
+      {/* ── Three-column workspace ──────────────────────────── */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+
+        {/* Left sidebar: browser */}
+        <BrowserSidebar />
+
+        {/* Center: waveform + effects */}
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+
+          {/* Waveform region */}
+          <div
+            ref={centerRef}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            className={`relative shrink-0 border-b border-zinc-800 transition ${
+              dragActive ? 'bg-purple-500/5' : ''
+            } ${currentFile && showWaveform ? '' : currentFile ? 'hidden' : ''}`}
+          >
+            {currentFile && showWaveform && <WaveformView />}
+          </div>
+
+          {/* Empty state — drop zone when no file */}
+          {!currentFile && (
+            <div
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex shrink-0 cursor-pointer flex-col items-center justify-center border-b border-zinc-800 py-12 transition ${
+                dragActive ? 'bg-purple-500/5' : 'bg-zinc-950 hover:bg-zinc-900/40'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*,.wav,.mp3,.ogg,.flac,.m4a,.aac"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0]
+                  if (f) await handleDroppedFile(f)
+                  e.target.value = ''
+                }}
+              />
+              <svg className={`mb-3 h-8 w-8 transition ${dragActive ? 'text-purple-400' : 'text-zinc-700'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              <p className="text-sm font-medium text-zinc-400">
+                {ro ? 'Niciun fișier încărcat' : 'No file loaded'}
+              </p>
+              <p className="mt-1 text-[11px] text-zinc-600">
+                {dragActive
+                  ? (ro ? 'Eliberează pentru a încărca' : 'Release to load')
+                  : (ro ? 'Click sau trage un fișier audio aici' : 'Click or drop an audio file here')}
+              </p>
+              <p className="mt-0.5 text-[10px] text-zinc-700">WAV · MP3 · OGG · FLAC · M4A · AAC</p>
+            </div>
+          )}
+
+          {/* Synth Lab */}
+          {showSynthLab && (
+            <div className="shrink-0 border-b border-zinc-800">
+              <SynthLab />
+            </div>
+          )}
+
+          {/* Effects chain */}
+          <div className="flex-1 overflow-y-auto p-3">
+            <EffectsRack />
+          </div>
+        </main>
+
+        {/* Right sidebar: inspector + master */}
+        <InspectorSidebar />
+      </div>
+
+      {/* ── Transport ──────────────────────────────────────── */}
+      <footer className="shrink-0 border-t border-zinc-800">
+        <TransportBar />
+      </footer>
 
       <OnboardingTutorial />
       <KeyboardHint />
-
-      <footer className="border-t border-zinc-800 px-3 py-2 sm:px-6 sm:py-3">
-        <div className="mx-auto max-w-5xl">
-          <TransportBar />
-        </div>
-      </footer>
     </div>
   )
 }

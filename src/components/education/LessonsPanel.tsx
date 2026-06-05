@@ -674,7 +674,6 @@ function QuizBlock({ quiz, language, answers, submitted, onAnswer, onSubmit, onR
 
       {quiz.map((q, qi) => {
         const chosen = answers[qi] ?? null
-        const isCorrect = submitted && chosen === q.correct
         const isWrong   = submitted && chosen !== null && chosen !== q.correct
         return (
           <div key={qi} className="space-y-1.5">

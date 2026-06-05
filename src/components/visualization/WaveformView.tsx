@@ -66,7 +66,7 @@ export function WaveformView() {
       barWidth: 2,
       barGap: 1,
       barRadius: 2,
-      height: 140,
+      height: 80,
       normalize: true,
       interact: true,
       peaks: peaks as unknown as number[][],
@@ -167,14 +167,14 @@ export function WaveformView() {
   const clearLabel  = language === 'ro' ? 'Șterge'  : 'Clear'
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="bg-zinc-900 px-3 pb-2 pt-1">
       <div ref={containerRef} className="w-full" />
 
       {/* Controls row */}
-      <div className="mt-2 flex items-center justify-between gap-4">
-        <p className="text-xs text-zinc-500">{hint}</p>
+      <div className="mt-1 flex items-center justify-between gap-4">
+        <p className="text-[10px] text-zinc-600">{hint}</p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {/* Loop region times */}
           {hasRegion && (
             <span className="font-mono text-[11px] text-zinc-400">
