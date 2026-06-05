@@ -212,16 +212,16 @@ function App() {
             </div>
           )}
 
-          {/* Synth Lab */}
-          {showSynthLab && (
-            <div className="shrink-0 border-b border-zinc-800">
-              <SynthLab />
+          {/* Synth + Effects — single scrollable region */}
+          <div className="flex-1 overflow-y-auto">
+            {showSynthLab && (
+              <div className="border-b border-zinc-800">
+                <SynthLab />
+              </div>
+            )}
+            <div className="p-3">
+              <EffectsRack />
             </div>
-          )}
-
-          {/* Effects chain */}
-          <div className="flex-1 overflow-y-auto p-3">
-            <EffectsRack />
           </div>
         </main>
 
