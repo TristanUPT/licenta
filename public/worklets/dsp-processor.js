@@ -1,5 +1,5 @@
-// SoundLab DSP AudioWorklet processor.
-// Runs in AudioWorkletGlobalScope. Loads the SoundLab DSP WASM module sent
+// ResoLab DSP AudioWorklet processor.
+// Runs in AudioWorkletGlobalScope. Loads the ResoLab DSP WASM module sent
 // from the main thread and forwards audio frames + control messages.
 
 const RENDER_QUANTUM = 128;

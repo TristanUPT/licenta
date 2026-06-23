@@ -137,6 +137,7 @@ export function EffectsRack() {
           {(['chain', 'presets'] as Tab[]).map((t) => (
             <button
               key={t}
+              data-tour={t === 'presets' ? 'presets' : undefined}
               onClick={() => setTab(t)}
               className={`px-4 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-widest transition ${
                 tab === t
@@ -175,7 +176,7 @@ export function EffectsRack() {
               {/* Add effect popover */}
               <Popover.Root open={open} onOpenChange={setOpen}>
                 <Popover.Trigger asChild>
-                  <button className="rounded border border-zinc-800 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition hover:border-zinc-700 hover:text-zinc-300">
+                  <button data-tour="add-effect" className="rounded border border-zinc-800 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition hover:border-zinc-700 hover:text-zinc-300">
                     {ro ? '+ Efect' : '+ Add Effect'}
                   </button>
                 </Popover.Trigger>

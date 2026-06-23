@@ -29,7 +29,7 @@ export function InspectorSidebar() {
   const hasEducation = showVisualizer || showEducation || showLessons
 
   return (
-    <aside className="flex h-full w-56 shrink-0 flex-col border-l border-zinc-800 bg-zinc-950">
+    <aside data-tour="visualizer" className="flex h-full w-56 shrink-0 flex-col border-l border-zinc-800 bg-zinc-950">
       {/* Inspector */}
       <div className="shrink-0 border-b border-zinc-800 p-3">
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">

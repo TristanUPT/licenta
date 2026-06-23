@@ -22,6 +22,7 @@ let startedAtBufferOffset = 0
 let loopEnabled = false
 let loopStartSec = 0
 let loopEndSec = 0
+let playbackRate = 1
 let rafHandle: number | null = null
 
 const endedListeners = new Set<EndedListener>()
@@ -41,7 +42,7 @@ function tickPosition() {
     rafHandle = null
     return
   }
-  let position = startedAtBufferOffset + (ctx.currentTime - startedAtCtxTime)
+  let position = startedAtBufferOffset + (ctx.currentTime - startedAtCtxTime) * playbackRate
   if (loopEnabled && currentBuffer && loopEndSec > loopStartSec) {
     const loopLen = loopEndSec - loopStartSec
     if (position >= loopEndSec) {
@@ -102,6 +103,8 @@ export function play(buffer: AudioBuffer, opts: PlayOptions = {}): void {
     source.loopEnd = loopEndSec
   }
 
+  source.playbackRate.value = playbackRate
+
   source.connect(node)
   // Engine node may already be connected to destination — make sure it is.
   // Repeatedly connecting is a no-op.
@@ -135,6 +138,17 @@ export function setLoopRegion(startSec: number, endSec: number, enabled: boolean
     currentSource.loopStart = startSec
     currentSource.loopEnd = endSec
   }
+}
+
+export function setPlaybackRate(rate: number): void {
+  playbackRate = rate
+  if (currentSource) {
+    currentSource.playbackRate.value = rate
+  }
+}
+
+export function getPlaybackRate(): number {
+  return playbackRate
 }
 
 export function isPlaying(): boolean {

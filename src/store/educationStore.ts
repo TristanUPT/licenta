@@ -36,7 +36,7 @@ export const useEducationStore = create<EducationState>()(
             : [...s.completedLessons, index],
         }), undefined, 'edu/markLessonComplete'),
       }),
-      { name: 'soundlab-education' },
+      { name: 'resolab-education' },
     ),
     { name: 'educationStore' },
   ),

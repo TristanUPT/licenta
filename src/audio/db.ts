@@ -1,7 +1,7 @@
 import { openDB } from 'idb'
 import type { Preset } from '@/presets/factoryPresets'
 
-const DB_NAME    = 'soundlab'
+const DB_NAME    = 'resolab'
 const DB_VERSION = 1
 
 const dbPromise = openDB(DB_NAME, DB_VERSION, {

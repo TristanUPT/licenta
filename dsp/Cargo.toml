@@ -1,5 +1,5 @@
 [package]
-name = "soundlab-dsp"
+name = "resolab-dsp"
 version = "0.1.0"
 edition = "2024"
 

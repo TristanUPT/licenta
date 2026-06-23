@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useAudioStore } from '@/store/audioStore'
 import { useAnalysisStore } from '@/store/analysisStore'
 import { useEffectsStore } from '@/store/effectsStore'
 import * as transport from '@/audio/transport'
+import * as metronome from '@/audio/metronome'
 import { renderAndDownload } from '@/audio/export'
 import { LevelMeter } from '@/components/visualization/LevelMeter'
 import { useRecording } from '@/hooks/useRecording'
@@ -138,6 +139,8 @@ export function TransportBar() {
           </button>
         </div>
 
+        <MetronomeGroup />
+
         <RecordingControls />
 
         <div className="flex flex-1 items-baseline gap-1.5 font-mono text-xs sm:gap-2 sm:text-sm">
@@ -205,30 +208,345 @@ export function TransportBar() {
   )
 }
 
+// ─── Metronome Group (BPM + metronome button + time sig) ─────────────────────
+
+const TIME_SIGS = ['2/4', '3/4', '4/4', '6/8'] as const
+type TimeSig = typeof TIME_SIGS[number]
+
+function beatsFromSig(sig: TimeSig): number {
+  return parseInt(sig.split('/')[0]!)
+}
+
+function MetronomeGroup() {
+  const [bpm, setBpmLocal] = useState(120)
+  const [active, setActive] = useState(false)
+  const [timeSig, setTimeSig] = useState<TimeSig>('4/4')
+  const [beat, setBeat] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState('')
+  const [sigOpen, setSigOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const holdRef = useRef<number | null>(null)
+  const beatTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const off = metronome.onBeat(() => {
+      setBeat(true)
+      if (beatTimeoutRef.current !== null) clearTimeout(beatTimeoutRef.current)
+      beatTimeoutRef.current = window.setTimeout(() => setBeat(false), 80)
+    })
+    return () => {
+      off()
+      if (beatTimeoutRef.current !== null) clearTimeout(beatTimeoutRef.current)
+    }
+  }, [])
+
+  const changeBpm = useCallback((value: number) => {
+    const clamped = Math.max(40, Math.min(240, value))
+    setBpmLocal(clamped)
+    metronome.setBpm(clamped)
+  }, [])
+
+  function startHold(delta: number) {
+    changeBpm(bpm + delta)
+    let speed = 150
+    const tick = () => {
+      changeBpm(metronome.getBpm() + delta)
+      speed = Math.max(30, speed * 0.9)
+      holdRef.current = window.setTimeout(tick, speed)
+    }
+    holdRef.current = window.setTimeout(tick, 400)
+  }
+
+  function stopHold() {
+    if (holdRef.current !== null) {
+      clearTimeout(holdRef.current)
+      holdRef.current = null
+    }
+  }
+
+  function handleToggleMetronome() {
+    if (active) {
+      metronome.stopMetronome()
+      setActive(false)
+    } else {
+      void metronome.startMetronome().then(() => setActive(true))
+    }
+  }
+
+  function handleTimeSig(sig: TimeSig) {
+    setTimeSig(sig)
+    metronome.setBeatsPerMeasure(beatsFromSig(sig))
+    setSigOpen(false)
+  }
+
+  function startEdit() {
+    setEditValue(String(bpm))
+    setEditing(true)
+    requestAnimationFrame(() => inputRef.current?.select())
+  }
+
+  function commitEdit() {
+    setEditing(false)
+    const n = parseInt(editValue, 10)
+    if (!isNaN(n)) changeBpm(n)
+  }
+
+  function handleWheel(e: React.WheelEvent) {
+    e.preventDefault()
+    changeBpm(bpm + (e.deltaY < 0 ? 1 : -1))
+  }
+
+  return (
+    <div className="hidden items-center gap-1 sm:flex">
+      {/* BPM control */}
+      <div className="flex h-9 items-center overflow-hidden rounded-lg border border-zinc-700 sm:h-10">
+        {/* Minus */}
+        <button
+          onPointerDown={() => startHold(-1)}
+          onPointerUp={stopHold}
+          onPointerLeave={stopHold}
+          className="flex h-full w-7 items-center justify-center text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-700"
+          aria-label="Decrease BPM"
+        >
+          <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
+        </button>
+
+        {/* Display / edit */}
+        <div
+          className="flex h-full w-[72px] cursor-pointer items-center justify-center border-x border-zinc-700 bg-zinc-900 px-1"
+          onWheel={handleWheel}
+          onClick={() => !editing && startEdit()}
+          onDoubleClick={() => { changeBpm(120); setEditing(false) }}
+        >
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditing(false) }}
+              className="w-full bg-transparent text-center font-mono text-[11px] font-semibold text-purple-300 outline-none"
+              type="text"
+              inputMode="numeric"
+            />
+          ) : (
+            <span className="flex items-center gap-1 font-mono text-[11px] font-semibold text-zinc-300">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full bg-purple-500"
+                style={{
+                  transform: beat ? 'scale(1.4)' : 'scale(1)',
+                  transition: 'transform 80ms ease-out',
+                }}
+              />
+              {bpm}
+              <span className="text-[9px] font-normal text-zinc-600">BPM</span>
+            </span>
+          )}
+        </div>
+
+        {/* Plus */}
+        <button
+          onPointerDown={() => startHold(1)}
+          onPointerUp={stopHold}
+          onPointerLeave={stopHold}
+          className="flex h-full w-7 items-center justify-center text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-700"
+          aria-label="Increase BPM"
+        >
+          <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+      </div>
+
+      {/* Metronome button */}
+      <button
+        onClick={handleToggleMetronome}
+        title={active ? 'Stop metronome' : 'Start metronome'}
+        aria-pressed={active}
+        className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
+          active
+            ? 'text-white hover:brightness-110'
+            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+        }`}
+        style={active ? {
+          backgroundColor: beat ? '#a78bfa' : '#7c3aed',
+          transition: 'background-color 80ms ease-out',
+        } : undefined}
+      >
+        {/* Metronome icon */}
+        <svg className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 22h12" />
+          <path d="M7 22L9.5 4h5L17 22" />
+          <path d="M12 14l5-8" />
+          <circle cx="12" cy="14" r="1.2" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
+
+      {/* Time signature */}
+      <div className="relative">
+        <button
+          onClick={() => setSigOpen(!sigOpen)}
+          className="flex h-9 items-center rounded-lg bg-zinc-800 px-2 font-mono text-[11px] font-semibold text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-200 sm:h-10"
+        >
+          {timeSig}
+        </button>
+        {sigOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setSigOpen(false)} />
+            <div className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-xl">
+              {TIME_SIGS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleTimeSig(s)}
+                  className={`block w-full rounded px-3 py-1 text-left font-mono text-[11px] transition ${
+                    timeSig === s
+                      ? 'bg-purple-600 text-white'
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Recording Controls ──────────────────────────────────────────────────────
+
+function formatRec(sec: number) {
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
 function RecordingControls() {
-  const { micActive, isRecording, recordingUrl, recExt, micError, toggleMic, startRecording, stopRecording, clearRecording } = useRecording()
+  const {
+    micActive, isRecording, recordingUrl, recordingSec, micError,
+    audioDevices, selectedDeviceId, monitoring,
+    enumerateDevices, selectDevice, disconnectMic, toggleMonitor,
+    startRecording, stopRecording, clearRecording,
+  } = useRecording()
+  const [devOpen, setDevOpen] = useState(false)
+
+  async function handleMicClick() {
+    if (micActive && !devOpen) {
+      setDevOpen(true)
+      return
+    }
+    if (devOpen) {
+      setDevOpen(false)
+      return
+    }
+    await enumerateDevices()
+    setDevOpen(true)
+  }
+
+  async function handleSelectDevice(id: string) {
+    await selectDevice(id)
+    setDevOpen(false)
+  }
 
   return (
     <div className="flex items-center gap-1 sm:gap-1.5">
-      {/* Mic toggle */}
-      <button
-        onClick={() => void toggleMic()}
-        title={micError ?? (micActive ? 'Disable microphone' : 'Enable microphone input')}
-        className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
-          micError
-            ? 'bg-red-900 text-red-400 hover:bg-red-800'
-            : micActive
-            ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-        }`}
-      >
-        <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5" fill="currentColor" viewBox="0 0 24 24">
-          <rect x="9" y="2" width="6" height="11" rx="3" />
-          <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth={2} fill="none" strokeLinecap="round" />
-          <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-          <line x1="9" y1="21" x2="15" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-        </svg>
-      </button>
+      {/* Mic / device selector */}
+      <div className="relative">
+        <button
+          onClick={() => void handleMicClick()}
+          title={micError ?? (micActive ? 'Audio input settings' : 'Select audio input')}
+          className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
+            micError
+              ? 'bg-red-900 text-red-400 hover:bg-red-800'
+              : micActive
+              ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+          }`}
+        >
+          <MicIcon />
+        </button>
+
+        {devOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setDevOpen(false)} />
+            <div className="absolute bottom-full left-0 z-50 mb-2 w-64 rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+              <div className="border-b border-zinc-800 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+                  Audio Input
+                </p>
+              </div>
+
+              {micError && (
+                <div className="border-b border-zinc-800 px-3 py-2 text-[11px] text-red-400">
+                  {micError}
+                </div>
+              )}
+
+              <div className="max-h-40 overflow-y-auto p-1" style={{ scrollbarWidth: 'thin' }}>
+                {audioDevices.length === 0 ? (
+                  <button
+                    onClick={() => void enumerateDevices()}
+                    className="w-full rounded px-3 py-2 text-left text-[11px] text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
+                  >
+                    Scan for devices…
+                  </button>
+                ) : (
+                  audioDevices.map((d) => (
+                    <button
+                      key={d.deviceId}
+                      onClick={() => void handleSelectDevice(d.deviceId)}
+                      className={`flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-[11px] transition ${
+                        selectedDeviceId === d.deviceId
+                          ? 'bg-purple-600/20 text-purple-300'
+                          : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                      }`}
+                    >
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        selectedDeviceId === d.deviceId ? 'bg-emerald-500' : 'bg-zinc-700'
+                      }`} />
+                      <span className="truncate">{d.label || `Input ${d.deviceId.slice(0, 8)}`}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Monitor toggle + disconnect */}
+              {micActive && (
+                <div className="space-y-1 border-t border-zinc-800 p-2">
+                  <button
+                    onClick={toggleMonitor}
+                    className={`flex w-full items-center gap-2 rounded px-3 py-1.5 text-[11px] transition ${
+                      monitoring
+                        ? 'bg-emerald-600/20 text-emerald-300'
+                        : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
+                    }`}
+                  >
+                    <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 12h.01" />
+                    </svg>
+                    {monitoring ? 'Monitoring active' : 'Monitor (direct listen)'}
+                  </button>
+                  {monitoring && (
+                    <p className="px-3 text-[10px] text-amber-500">
+                      ⚠ Use headphones to avoid feedback
+                    </p>
+                  )}
+                  <button
+                    onClick={() => { disconnectMic(); setDevOpen(false) }}
+                    className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-[11px] text-zinc-600 transition hover:bg-zinc-800 hover:text-red-400"
+                  >
+                    <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Disconnect input
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Record / Stop record */}
       <button
@@ -247,10 +565,15 @@ function RecordingControls() {
         )}
       </button>
 
-      {/* Pulsing REC badge */}
+      {/* REC badge + timer */}
       {isRecording && (
-        <span className="hidden animate-pulse font-mono text-[10px] font-bold tracking-widest text-red-400 sm:block">
-          REC
+        <span className="hidden items-center gap-1.5 sm:flex">
+          <span className="animate-pulse font-mono text-[10px] font-bold tracking-widest text-red-400">
+            REC
+          </span>
+          <span className="font-mono text-[11px] tabular-nums text-red-300">
+            {formatRec(recordingSec)}
+          </span>
         </span>
       )}
 
@@ -259,14 +582,14 @@ function RecordingControls() {
         <>
           <a
             href={recordingUrl}
-            download={`recording.${recExt}`}
-            title="Download recording"
+            download="recording.wav"
+            title="Download recording (WAV)"
             className="hidden h-9 items-center gap-1 rounded-lg bg-zinc-800 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-300 transition hover:bg-zinc-700 hover:text-white sm:flex sm:h-10"
           >
             <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            {recExt.toUpperCase()}
+            WAV
           </a>
           <button
             onClick={clearRecording}
@@ -278,6 +601,19 @@ function RecordingControls() {
     </div>
   )
 }
+
+function MicIcon() {
+  return (
+    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" strokeWidth={2} fill="none" strokeLinecap="round" />
+      <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+      <line x1="9" y1="21" x2="15" y2="21" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function FileInfo({ currentFile }: { currentFile: { name: string; sampleRate: number; numberOfChannels: number } }) {
   return (

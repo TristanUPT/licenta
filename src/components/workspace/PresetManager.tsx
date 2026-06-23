@@ -96,7 +96,7 @@ export function PresetManager() {
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
     a.href     = url
-    a.download = `${(preset.name.en).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.soundlab.json`
+    a.download = `${(preset.name.en).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.resolab.json`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -115,7 +115,7 @@ export function PresetManager() {
         category: 'user',
         name: typeof raw['name'] === 'object' && raw['name'] !== null
           ? raw['name'] as { ro: string; en: string }
-          : { ro: file.name.replace(/\.soundlab\.json$/, ''), en: file.name.replace(/\.soundlab\.json$/, '') },
+          : { ro: file.name.replace(/\.resolab\.json$/, ''), en: file.name.replace(/\.resolab\.json$/, '') },
         description: { ro: '', en: '' },
         effects: (raw['effects'] as Preset['effects']).map((ef) => ({
           type: ef.type,
@@ -255,7 +255,7 @@ export function PresetManager() {
             <input
               ref={importInputRef}
               type="file"
-              accept=".json,.soundlab.json"
+              accept=".json,.resolab.json"
               className="hidden"
               onChange={(e) => void handleImportFile(e)}
             />

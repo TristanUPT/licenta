@@ -1,5 +1,6 @@
-import wasmUrl from '../../dsp/pkg/soundlab_dsp_bg.wasm?url'
+import wasmUrl from '../../dsp/pkg/resolab_dsp_bg.wasm?url'
 import type { EffectInstance } from '@/types/effects'
+import { encodeWav } from './wav-encoder'
 
 const RENDER_QUANTUM = 128
 const WARMUP_BLOCKS = 256
@@ -96,7 +97,12 @@ export async function renderAndDownload(
   wasm.destroy_engine(enginePtr)
 
   // ── 8. Encode stereo WAV and trigger download ─────────────────────────────
-  const blob = encodeWav16Stereo(outL, outR, sr)
+  const offlineCtx = new OfflineAudioContext(2, outL.length, sr)
+  const buf = offlineCtx.createBuffer(2, outL.length, sr)
+  buf.getChannelData(0).set(outL)
+  buf.getChannelData(1).set(outR)
+
+  const blob = encodeWav(buf)
   const url  = URL.createObjectURL(blob)
   const stem = sourceFileName.replace(/\.[^.]+$/, '')
   const a    = document.createElement('a')
@@ -104,44 +110,4 @@ export async function renderAndDownload(
   a.download = `${stem}_processed.wav`
   a.click()
   URL.revokeObjectURL(url)
-}
-
-// ─── WAV encoder (16-bit PCM, stereo interleaved) ────────────────────────────
-
-function encodeWav16Stereo(left: Float32Array, right: Float32Array, sampleRate: number): Blob {
-  const numChannels   = 2
-  const bitsPerSample = 16
-  const byteRate      = sampleRate * numChannels * (bitsPerSample / 8)
-  const blockAlign    = numChannels * (bitsPerSample / 8)
-  const numFrames     = left.length
-  const dataBytes     = numFrames * blockAlign
-  const buf           = new ArrayBuffer(44 + dataBytes)
-  const v             = new DataView(buf)
-
-  ws(v,  0, 'RIFF');  v.setUint32( 4, 36 + dataBytes, true)
-  ws(v,  8, 'WAVE')
-  ws(v, 12, 'fmt ');  v.setUint32(16, 16,           true)
-                      v.setUint16(20, 1,             true)  // PCM
-                      v.setUint16(22, numChannels,   true)
-                      v.setUint32(24, sampleRate,    true)
-                      v.setUint32(28, byteRate,      true)
-                      v.setUint16(32, blockAlign,    true)
-                      v.setUint16(34, bitsPerSample, true)
-  ws(v, 36, 'data');  v.setUint32(40, dataBytes,     true)
-
-  // Interleaved: L0, R0, L1, R1, …
-  let off = 44
-  for (let i = 0; i < numFrames; i++) {
-    const l = Math.max(-1, Math.min(1, left[i]  ?? 0))
-    const r = Math.max(-1, Math.min(1, right[i] ?? 0))
-    v.setInt16(off,     l < 0 ? l * 0x8000 : l * 0x7fff, true)
-    v.setInt16(off + 2, r < 0 ? r * 0x8000 : r * 0x7fff, true)
-    off += 4
-  }
-
-  return new Blob([buf], { type: 'audio/wav' })
-}
-
-function ws(v: DataView, offset: number, s: string) {
-  for (let i = 0; i < s.length; i++) v.setUint8(offset + i, s.charCodeAt(i))
 }

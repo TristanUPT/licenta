@@ -7,7 +7,7 @@ import { useUiStore } from '@/store/uiStore'
 import { useAudioStore } from '@/store/audioStore'
 import * as transport from '@/audio/transport'
 
-const ONBOARDING_KEY = 'soundlab-onboarding-done'
+const ONBOARDING_KEY = 'resolab-onboarding-done'
 
 export function SettingsPanel() {
   const [open, setOpen] = useState(false)
@@ -88,7 +88,7 @@ export function SettingsPanel() {
             {ro ? 'Setări' : 'Settings'}
           </Dialog.Title>
           <Dialog.Description className="sr-only">
-            {ro ? 'Preferințe aplicație SoundLab' : 'SoundLab application preferences'}
+            {ro ? 'Preferințe aplicație ResoLab' : 'ResoLab application preferences'}
           </Dialog.Description>
 
           <div className="mt-4 space-y-5">

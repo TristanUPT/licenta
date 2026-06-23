@@ -32,7 +32,7 @@ export const useUiStore = create<UiState>()(
         toggleSynthLab:   () => set((s) => ({ showSynthLab:   !s.showSynthLab   }), undefined, 'ui/toggleSynthLab'),
       }),
       {
-        name: 'soundlab-ui',
+        name: 'resolab-ui',
         partialize: (s) => ({
           showWaveform:   s.showWaveform,
           showVisualizer: s.showVisualizer,

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useEducationStore } from '@/store/educationStore'
 import { useSynthStore } from '@/store/synthStore'
 
-const STORAGE_KEY = 'soundlab-kb-hint-dismissed'
+const STORAGE_KEY = 'resolab-kb-hint-dismissed'
 
 const SHORTCUTS = [
   { key: 'Space',   ro: 'Play / Pause',         en: 'Play / Pause' },

@@ -1,6 +1,6 @@
 import type { WorkletInMsg, WorkletOutMsg } from './worklet-bridge'
 
-import wasmUrl from '../../dsp/pkg/soundlab_dsp_bg.wasm?url'
+import wasmUrl from '../../dsp/pkg/resolab_dsp_bg.wasm?url'
 
 const WORKLET_URL = '/worklets/dsp-processor.js'
 const SAMPLE_RATE = 48_000

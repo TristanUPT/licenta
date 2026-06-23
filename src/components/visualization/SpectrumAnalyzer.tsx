@@ -46,7 +46,7 @@ export function SpectrumAnalyzer() {
         reflexAlpha: 0.2,
       })
       // Custom violet gradient.
-      analyzer.registerGradient('soundlab', {
+      analyzer.registerGradient('resolab', {
         bgColor: '#0a0a0a',
         colorStops: [
           { pos: 0,    color: '#a855f7' },
@@ -54,7 +54,7 @@ export function SpectrumAnalyzer() {
           { pos: 1,    color: '#22d3ee' },
         ],
       })
-      analyzer.setOptions({ gradient: 'soundlab' })
+      analyzer.setOptions({ gradient: 'resolab' })
       analyzerRef.current = analyzer
     }
 

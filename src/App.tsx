@@ -106,7 +106,7 @@ function App() {
       <header className="flex h-10 shrink-0 items-center justify-between border-b border-zinc-800 px-3">
         <div className="flex items-center gap-3">
           <h1 className="text-sm font-bold tracking-tight">
-            Sound<span className="text-purple-400">Lab</span>
+            Reso<span className="text-purple-400">Lab</span>
           </h1>
           <span className="hidden text-[10px] text-zinc-600 sm:inline">Mini-DAW Educațional</span>
         </div>
@@ -164,6 +164,7 @@ function App() {
 
           {/* Waveform region */}
           <div
+            data-tour="dropzone"
             ref={centerRef}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
@@ -178,6 +179,7 @@ function App() {
           {/* Empty state — drop zone when no file */}
           {!currentFile && (
             <div
+              data-tour="dropzone"
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}
@@ -230,7 +232,7 @@ function App() {
       </div>
 
       {/* ── Transport ──────────────────────────────────────── */}
-      <footer className="shrink-0 border-t border-zinc-800">
+      <footer data-tour="transport" className="shrink-0 border-t border-zinc-800">
         <TransportBar />
       </footer>
 
