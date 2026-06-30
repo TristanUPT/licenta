@@ -29,12 +29,6 @@ class DspProcessor extends AudioWorkletProcessor {
     this.meterValsView = null;
     this.localBlockCount = 0;
 
-    // Synth state
-    this.synthPtr = 0;
-    this.synthMode = false;
-    this.synthBufPtr = 0;
-    this.synthBufView = null;
-
     this.port.onmessage = (event) => this._onMessage(event.data);
     this.port.postMessage({ type: 'hello' });
     console.log('[worklet] processor constructed; sent hello');
@@ -68,32 +62,6 @@ class DspProcessor extends AudioWorkletProcessor {
         case 'reorder':
           if (this.ready) this._reorder(msg.order);
           break;
-        case 'synth_create':
-          if (this.ready && this.synthPtr === 0) {
-            this.synthPtr = this.wasm.create_synth(sampleRate);
-            this.synthMode = true;
-            console.log('[worklet] synth created, ptr=', this.synthPtr);
-          }
-          break;
-        case 'synth_destroy':
-          if (this.ready && this.synthPtr !== 0) {
-            this.wasm.destroy_synth(this.synthPtr);
-            this.synthPtr = 0;
-            this.synthMode = false;
-          }
-          break;
-        case 'synth_note_on':
-          if (this.ready && this.synthPtr !== 0)
-            this.wasm.synth_note_on(this.synthPtr, msg.midiNote, msg.freqHz);
-          break;
-        case 'synth_note_off':
-          if (this.ready && this.synthPtr !== 0)
-            this.wasm.synth_note_off(this.synthPtr, msg.midiNote);
-          break;
-        case 'synth_set_param':
-          if (this.ready && this.synthPtr !== 0)
-            this.wasm.synth_set_param(this.synthPtr, msg.paramId, msg.value);
-          break;
       }
     } catch (err) {
       this._postError(err, 'message');
@@ -117,7 +85,6 @@ class DspProcessor extends AudioWorkletProcessor {
     this.inputRPtr   = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.outputPtr   = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.outputRPtr  = this.wasm.alloc_f32(RENDER_QUANTUM);
-    this.synthBufPtr = this.wasm.alloc_f32(RENDER_QUANTUM);
     this.meterIdsPtr = this.wasm.alloc_u32(MAX_METER_SLOTS);
     this.meterValsPtr = this.wasm.alloc_f32(MAX_METER_SLOTS);
     this.enginePtr = this.wasm.create_engine(sampleRate);
@@ -146,7 +113,6 @@ class DspProcessor extends AudioWorkletProcessor {
     this.inputRView   = new Float32Array(buffer, this.inputRPtr,   RENDER_QUANTUM);
     this.outputView   = new Float32Array(buffer, this.outputPtr,   RENDER_QUANTUM);
     this.outputRView  = new Float32Array(buffer, this.outputRPtr,  RENDER_QUANTUM);
-    this.synthBufView = new Float32Array(buffer, this.synthBufPtr, RENDER_QUANTUM);
     this.meterIdsView = new Uint32Array(buffer,  this.meterIdsPtr, MAX_METER_SLOTS);
     this.meterValsView = new Float32Array(buffer, this.meterValsPtr, MAX_METER_SLOTS);
   }
@@ -185,16 +151,7 @@ class DspProcessor extends AudioWorkletProcessor {
       this.inputRView.fill(0);
     }
 
-    // 2. Mix synth into both channels additively.
-    if (this.synthMode && this.synthPtr !== 0) {
-      this.wasm.synth_process(this.synthPtr, this.synthBufPtr, RENDER_QUANTUM);
-      for (let i = 0; i < RENDER_QUANTUM; i++) {
-        this.inputView[i]  += this.synthBufView[i];
-        this.inputRView[i] += this.synthBufView[i];
-      }
-    }
-
-    // 3. Process stereo through the effect chain.
+    // 2. Process stereo through the effect chain.
     const rc = this.wasm.process_stereo(
       this.enginePtr,
       this.inputPtr,  this.inputRPtr,

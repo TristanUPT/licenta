@@ -272,8 +272,8 @@ export function OnboardingTutorial() {
       >
         <div
           style={{
-            background: '#13132a',
-            border: '1px solid #2d2060',
+            background: 'var(--tooltip-bg)',
+            border: '1px solid var(--tooltip-border)',
             borderRadius: 12,
             overflow: 'hidden',
           }}
@@ -283,12 +283,12 @@ export function OnboardingTutorial() {
             style={{ padding: '10px 15px 0 15px' }}
             className="flex items-center justify-between"
           >
-            <span style={{ fontSize: 10, color: '#5a5a7a', fontWeight: 600 }}>
+            <span style={{ fontSize: 10, color: 'var(--step-label)', fontWeight: 600 }}>
               {stepLabel}
             </span>
             <button
               onClick={finish}
-              style={{ fontSize: 10, color: '#5a5a7a', background: 'none', border: 'none', cursor: 'pointer' }}
+              style={{ fontSize: 10, color: 'var(--step-label)', background: 'none', border: 'none', cursor: 'pointer' }}
               className="transition hover:text-zinc-300"
             >
               {skipLabel}
@@ -298,21 +298,21 @@ export function OnboardingTutorial() {
           {/* Content */}
           <div style={{ padding: '10px 15px 12px 15px' }}>
             <div style={{ fontSize: 24, marginBottom: 6 }}>{s.icon}</div>
-            <h2 style={{ fontSize: 13, fontWeight: 500, color: '#e2d9ff', marginBottom: 6, lineHeight: 1.3 }}>
+            <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--tooltip-title)', marginBottom: 6, lineHeight: 1.3 }}>
               {s.title[language]}
             </h2>
-            <p style={{ fontSize: 11.5, color: '#7a7a9a', lineHeight: 1.65, margin: 0 }}>
+            <p style={{ fontSize: 11.5, color: 'var(--tooltip-body)', lineHeight: 1.65, margin: 0 }}>
               {s.body[language]}
             </p>
             {s.tip && (
               <div
                 style={{
                   marginTop: 8,
-                  background: '#1e1540',
+                  background: 'var(--tip-section-bg)',
                   borderRadius: 6,
                   padding: '6px 10px',
                   fontSize: 11,
-                  color: '#8b6fd4',
+                  color: 'var(--tip-text)',
                   lineHeight: 1.5,
                 }}
               >
@@ -324,7 +324,7 @@ export function OnboardingTutorial() {
           {/* Footer */}
           <div
             style={{
-              borderTop: '1px solid #1e1e3a',
+              borderTop: '1px solid var(--tooltip-divider)',
               padding: '10px 15px',
               display: 'flex',
               alignItems: 'center',
@@ -342,7 +342,7 @@ export function OnboardingTutorial() {
                     height: 5,
                     borderRadius: i === step ? 3 : '50%',
                     width: i === step ? 14 : 5,
-                    background: i === step ? '#7c3aed' : i < step ? 'rgba(124,58,237,0.4)' : '#2a2a4a',
+                    background: i === step ? 'var(--accent)' : i < step ? 'rgba(124,58,237,0.4)' : 'var(--dot-inactive)',
                     transition: 'width 200ms, border-radius 200ms',
                   }}
                 />
@@ -356,11 +356,11 @@ export function OnboardingTutorial() {
                   onClick={back}
                   style={{
                     background: 'transparent',
-                    border: '1px solid #2a2a4a',
+                    border: '1px solid var(--dot-inactive)',
                     borderRadius: 7,
                     padding: '5px 12px',
                     fontSize: 11,
-                    color: '#6a6a8a',
+                    color: 'var(--text-muted)',
                     cursor: 'pointer',
                   }}
                   className="transition hover:border-zinc-600 hover:text-zinc-300"
@@ -371,7 +371,7 @@ export function OnboardingTutorial() {
               <button
                 onClick={next}
                 style={{
-                  background: '#7c3aed',
+                  background: 'var(--accent)',
                   border: 'none',
                   borderRadius: 7,
                   padding: '5px 12px',

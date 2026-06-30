@@ -40,13 +40,14 @@ export function Oscilloscope() {
       const w = canvas.width
       const h = canvas.height
 
+      const isLight = document.documentElement.classList.contains('light')
       ctx2d.clearRect(0, 0, w, h)
-      ctx2d.fillStyle = '#09090b'
+      ctx2d.fillStyle = isLight ? '#f8f7fc' : '#09090b'
       ctx2d.fillRect(0, 0, w, h)
 
       // Grid: centre line + ±0.5 amplitude lines
       ctx2d.save()
-      ctx2d.strokeStyle = '#27272a'
+      ctx2d.strokeStyle = isLight ? '#dddae8' : '#27272a'
       ctx2d.lineWidth = 1
       for (const amp of [-1, -0.5, 0, 0.5, 1]) {
         const y = ((1 - amp) / 2) * h
@@ -60,7 +61,7 @@ export function Oscilloscope() {
       const samplesPerMs = SAMPLE_RATE / 1000
       const totalMs = VIEW_SAMPLES / samplesPerMs
       const msStep  = totalMs > 20 ? 5 : 2
-      ctx2d.fillStyle = '#52525b'
+      ctx2d.fillStyle = isLight ? '#8a8aaa' : '#52525b'
       ctx2d.font = `${9 * dpr}px monospace`
       for (let ms = 0; ms <= totalMs; ms += msStep) {
         const x = (ms / totalMs) * w

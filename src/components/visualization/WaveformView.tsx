@@ -4,6 +4,7 @@ import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import type { Region } from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import { useAudioStore } from '@/store/audioStore'
 import { useEducationStore } from '@/store/educationStore'
+import { useUiStore } from '@/store/uiStore'
 import * as transport from '@/audio/transport'
 
 const LOOP_REGION_ID = 'loop'
@@ -31,6 +32,7 @@ export function WaveformView() {
   const loopStart = useAudioStore((s) => s.loopStart)
   const loopEnd = useAudioStore((s) => s.loopEnd)
   const language = useEducationStore((s) => s.language)
+  const theme    = useUiStore((s) => s.theme)
 
   const duration = audioBuffer?.duration ?? 0
   const hasRegion = loopStart !== 0 || loopEnd !== duration
@@ -148,6 +150,16 @@ export function WaveformView() {
     if (!ws) return
     ws.setOptions({ cursorColor: isPlaying ? '#e4e4e7' : '#71717a' })
   }, [isPlaying])
+
+  useEffect(() => {
+    const ws = wsRef.current
+    if (!ws) return
+    if (theme === 'light') {
+      ws.setOptions({ waveColor: '#9e9ebf', progressColor: '#7c3aed', cursorColor: '#1a1a2e' })
+    } else {
+      ws.setOptions({ waveColor: '#52525b', progressColor: '#a855f7', cursorColor: '#e4e4e7' })
+    }
+  }, [theme])
 
   useEffect(() => {
     const region = loopRegionRef.current

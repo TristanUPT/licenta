@@ -245,6 +245,7 @@ function MetronomeGroup() {
     const clamped = Math.max(40, Math.min(240, value))
     setBpmLocal(clamped)
     metronome.setBpm(clamped)
+    transport.setPlaybackRate(clamped / 120)
   }, [])
 
   function startHold(delta: number) {

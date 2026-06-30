@@ -1,23 +1,71 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-/* ── Design tokens ─────────────────────────────────── */
+/* ── Dark theme (default) ──────────────────────────── */
 :root {
+  /* Brand */
   --accent:        #7c3aed;
   --accent-light:  #c4b5fd;
   --accent-dark:   #4c1d95;
+  --accent-hover:  #6d28d9;
+
+  /* Backgrounds */
   --bg-base:       #0a0a0f;
   --bg-elevated:   #111122;
   --bg-card:       rgba(255,255,255,0.03);
+
+  /* Borders */
   --border-subtle: rgba(255,255,255,0.07);
   --border-accent: rgba(124,58,237,0.3);
+
+  /* Text */
   --text-primary:  #e2e8f0;
   --text-muted:    #71717a;
   --text-accent:   #a78bfa;
+
+  /* Misc */
   --shadow-card:   0 1px 3px rgba(0,0,0,0.5);
+
+  /* Tutorial / tooltip */
+  --tooltip-bg:      #13132a;
+  --tooltip-border:  #2d2060;
+  --tooltip-title:   #e2d9ff;
+  --tooltip-body:    #7a7a9a;
+  --tip-section-bg:  #1e1540;
+  --tip-text:        #8b6fd4;
+  --tooltip-divider: #1e1e3a;
+  --dot-inactive:    #2a2a4a;
+  --step-label:      #5a5a7a;
+}
+
+/* ── Light theme ───────────────────────────────────── */
+html.light {
+  --bg-base:       #ffffff;
+  --bg-elevated:   #f4f3f8;
+  --bg-card:       rgba(0,0,0,0.02);
+  --border-subtle: rgba(0,0,0,0.1);
+  --border-accent: rgba(124,58,237,0.2);
+  --text-primary:  #1a1a2e;
+  --text-muted:    #6a6a8a;
+  --text-accent:   #6d28d9;
+  --shadow-card:   0 1px 4px rgba(0,0,0,0.08);
+
+  --tooltip-bg:      #ffffff;
+  --tooltip-border:  #e0d8f8;
+  --tooltip-title:   #1a1a2e;
+  --tooltip-body:    #4a4a6a;
+  --tip-section-bg:  #f0ebfb;
+  --tip-text:        #6d28d9;
+  --tooltip-divider: #e8e4f4;
+  --dot-inactive:    #dddae8;
+  --step-label:      #8a8aaa;
 }
 
 /* ── Base ──────────────────────────────────────────── */
+html, body {
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
 body {
   margin: 0;
   font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif;
@@ -27,9 +75,9 @@ body {
 
 /* ── Scrollbars ────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
-::-webkit-scrollbar-track  { background: #0a0a0f; }
-::-webkit-scrollbar-thumb  { background: #4c1d95; border-radius: 2px; }
-*                          { scrollbar-width: thin; scrollbar-color: #4c1d95 #0a0a0f; }
+::-webkit-scrollbar-track  { background: var(--bg-base); }
+::-webkit-scrollbar-thumb  { background: var(--accent-dark); border-radius: 2px; }
+*                          { scrollbar-width: thin; scrollbar-color: var(--accent-dark) var(--bg-base); }
 
 /* ── Focus ─────────────────────────────────────────── */
 :focus-visible {
@@ -38,211 +86,62 @@ body {
 }
 :focus:not(:focus-visible) { outline: none; }
 
-/* ── Global transitions ────────────────────────────── */
-button,
-input[type="range"],
-input[type="text"],
-input[type="number"] {
-  transition: all 0.15s ease;
+/* ── Theme transition on structural elements ────────── */
+header, footer, main, aside, nav {
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
 
-/* ── Synth module card ─────────────────────────────── */
-.synth-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-top: 2px solid var(--accent);
-  border-radius: 6px;
-  padding: 10px 12px;
-  box-shadow: var(--shadow-card);
+button, input[type="range"], input[type="text"], input[type="number"] {
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, opacity 0.15s ease;
 }
 
-.synth-card-label {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  font-weight: 400;
-  margin-bottom: 8px;
+/* ── Light mode: zinc background overrides ─────────── */
+html.light .bg-zinc-950      { background-color: #f8f7fc; }
+html.light .bg-zinc-900      { background-color: #f0eef8; }
+html.light .bg-zinc-800      { background-color: #e4e0f0; }
+html.light .bg-zinc-700      { background-color: #d4d0e4; }
+html.light .bg-zinc-900\/60  { background-color: rgba(240,238,248,0.6); }
+html.light .bg-zinc-900\/40  { background-color: rgba(240,238,248,0.4); }
+html.light .bg-zinc-950\/50  { background-color: rgba(248,247,252,0.5); }
+
+/* ── Light mode: zinc text overrides ──────────────── */
+html.light .text-zinc-100 { color: #0a0a1e; }
+html.light .text-zinc-200 { color: #1a1a2e; }
+html.light .text-zinc-300 { color: #2a2a44; }
+html.light .text-zinc-400 { color: #4a4a6a; }
+html.light .text-zinc-500 { color: #6a6a8a; }
+html.light .text-zinc-600 { color: #8a8aaa; }
+html.light .text-zinc-700 { color: #aaaacc; }
+
+/* ── Light mode: zinc border overrides ────────────── */
+html.light .border-zinc-900 { border-color: #e8e4f4; }
+html.light .border-zinc-800 { border-color: #d8d4e8; }
+html.light .border-zinc-700 { border-color: #c8c4d8; }
+html.light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) { border-color: #d8d4e8; }
+
+/* ── Light mode: hover state overrides ────────────── */
+html.light .hover\:bg-zinc-900\/40:hover { background-color: rgba(240,238,248,0.4); }
+html.light .hover\:bg-zinc-800:hover     { background-color: #e4e0f0; }
+html.light .hover\:bg-zinc-700:hover     { background-color: #d4d0e4; }
+html.light .hover\:text-zinc-400:hover   { color: #4a4a6a; }
+html.light .hover\:text-zinc-300:hover   { color: #2a2a44; }
+html.light .hover\:text-zinc-200:hover   { color: #1a1a2e; }
+html.light .hover\:border-zinc-600:hover { border-color: #b8b4cc; }
+
+/* ── Light mode: custom component overrides ────────── */
+html.light .bpm-display {
+  background: #f0eef8;
+  border-color: #c8c4d8;
+  color: var(--accent-hover);
 }
 
-/* ── Vertical fader ────────────────────────────────── */
-.synth-fader {
-  -webkit-appearance: none;
-  appearance: none;
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 14px;
-  height: 80px;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
+html.light .preset-chip {
+  background: #f0eef8;
+  border-color: #c8c4d8;
+  color: #6a6a8a;
 }
-
-.synth-fader::-webkit-slider-runnable-track {
-  width: 3px;
-  background: #1e1e2e;
-  border-radius: 2px;
-}
-
-.synth-fader::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px;
-  height: 6px;
-  background: var(--accent-light);
-  border-radius: 3px;
-  box-shadow: 0 0 8px rgba(196, 181, 253, 0.5);
-  margin-left: -5.5px;
-  cursor: grab;
-}
-
-.synth-fader::-webkit-slider-thumb:active {
-  cursor: grabbing;
-  background: var(--text-accent);
-  box-shadow: 0 0 12px rgba(167, 139, 250, 0.7);
-}
-
-.synth-fader::-moz-range-track {
-  width: 3px;
-  background: #1e1e2e;
-  border-radius: 2px;
-}
-
-.synth-fader::-moz-range-thumb {
-  width: 14px;
-  height: 6px;
-  background: var(--accent-light);
-  border-radius: 3px;
-  box-shadow: 0 0 8px rgba(196, 181, 253, 0.5);
-  border: none;
-  cursor: grab;
-}
-
-/* ── Pitch-bend fader (shorter) ────────────────────── */
-.pitch-fader {
-  -webkit-appearance: none;
-  appearance: none;
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 10px;
-  height: 56px;
-  background: transparent;
-  cursor: grab;
-  padding: 0;
-}
-
-.pitch-fader::-webkit-slider-runnable-track {
-  width: 3px;
-  background: #1e1e2e;
-  border-radius: 2px;
-}
-
-.pitch-fader::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 10px;
-  height: 5px;
-  background: var(--text-accent);
-  border-radius: 2px;
-  margin-left: -3.5px;
-}
-
-.pitch-fader::-moz-range-track {
-  width: 3px;
-  background: #1e1e2e;
-  border-radius: 2px;
-}
-
-.pitch-fader::-moz-range-thumb {
-  width: 10px;
-  height: 5px;
-  background: var(--text-accent);
-  border-radius: 2px;
-  border: none;
-}
-
-/* ── Gate slider (horizontal, smaller) ─────────────── */
-.gate-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 3px;
-  width: 64px;
-  background: #1e1e2e;
-  border-radius: 2px;
-  cursor: pointer;
-}
-
-.gate-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 10px;
-  height: 10px;
-  background: var(--accent-light);
-  border-radius: 50%;
-  box-shadow: 0 0 6px rgba(196, 181, 253, 0.4);
-}
-
-.gate-slider::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
-  background: var(--accent-light);
-  border-radius: 50%;
-  border: none;
-}
-
-/* ── Waveform button ───────────────────────────────── */
-.osc-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: 44px;
-  height: 44px;
-  border-radius: 6px;
-  border: 1px solid #2d2d2d;
-  background: transparent;
-  color: #555;
-  font-size: 9px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.osc-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent-light);
-}
-
-.osc-btn.active {
-  background: var(--accent-dark);
-  border-color: var(--accent);
-  color: var(--accent-light);
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.25);
-}
-
-/* ── Preset chip ───────────────────────────────────── */
-.preset-chip {
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 11px;
-  font-weight: 500;
-  background: #1a1a2e;
-  border: 1px solid #2d2d4e;
-  color: #888;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.preset-chip:hover {
-  border-color: #6d28d9;
-  color: var(--accent-light);
-}
-
-.preset-chip.active {
-  background: var(--accent-dark);
-  border-color: var(--accent);
-  color: #e9d5ff;
-}
+html.light .preset-chip:hover  { border-color: var(--accent); color: var(--accent-hover); }
+html.light .preset-chip.active { background: var(--accent-dark); border-color: var(--accent); color: #e9d5ff; }
 
 /* ── Digital BPM readout ───────────────────────────── */
 .bpm-display {
@@ -257,48 +156,24 @@ input[type="number"] {
   text-align: center;
   -moz-appearance: textfield;
 }
-
 .bpm-display::-webkit-outer-spin-button,
-.bpm-display::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-}
+.bpm-display::-webkit-inner-spin-button { -webkit-appearance: none; }
 
-/* ── Arp / Chord section ───────────────────────────── */
-.arp-section {
-  background: rgba(124, 58, 237, 0.06);
-  border: 1px solid rgba(124, 58, 237, 0.15);
-  border-radius: 6px;
-  padding: 10px 12px;
+/* ── Preset chip ───────────────────────────────────── */
+.preset-chip {
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #1a1a2e;
+  border: 1px solid #2d2d4e;
+  color: #888;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
 }
-
-/* ── Piano ─────────────────────────────────────────── */
-.piano-white-key {
-  background: linear-gradient(to bottom, #e8e8e8, #ffffff);
-  box-shadow: inset 0 -3px 6px rgba(0,0,0,0.15);
-  transition: background 0.06s ease;
-}
-
-.piano-white-key.active {
-  background: #d4b0ff;
-}
-
-.piano-white-key.queued {
-  background: #ede9fe;
-}
-
-.piano-black-key {
-  background: linear-gradient(to bottom, #1a1a1a, #2d2d2d);
-  border-radius: 0 0 4px 4px;
-  transition: background 0.06s ease;
-}
-
-.piano-black-key.active {
-  background: #6d28d9;
-}
-
-.piano-black-key.queued {
-  background: #7c3aed;
-}
+.preset-chip:hover  { border-color: #6d28d9; color: var(--accent-light); }
+.preset-chip.active { background: var(--accent-dark); border-color: var(--accent); color: #e9d5ff; }
 
 /* ── Meter gradient ────────────────────────────────── */
 .level-gradient {

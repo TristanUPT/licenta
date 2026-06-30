@@ -15,7 +15,6 @@ import { InspectorSidebar } from '@/components/workspace/InspectorSidebar'
 import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
-import { SynthLab } from '@/components/workspace/SynthLab'
 import { decodeFile } from '@/audio/file-loader'
 
 const STATUS_DOT: Record<EngineStatus, string> = {
@@ -61,12 +60,19 @@ function App() {
   const showVisualizer = useUiStore((s) => s.showVisualizer)
   const showEducation  = useUiStore((s) => s.showEducation)
   const showLessons    = useUiStore((s) => s.showLessons)
-  const showSynthLab   = useUiStore((s) => s.showSynthLab)
+  const theme          = useUiStore((s) => s.theme)
   const toggleWaveform   = useUiStore((s) => s.toggleWaveform)
   const toggleVisualizer = useUiStore((s) => s.toggleVisualizer)
   const toggleEducation  = useUiStore((s) => s.toggleEducation)
   const toggleLessons    = useUiStore((s) => s.toggleLessons)
-  const toggleSynthLab   = useUiStore((s) => s.toggleSynthLab)
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light')
+    } else {
+      document.documentElement.classList.remove('light')
+    }
+  }, [theme])
 
   /* ── Central drop zone (when no file loaded) ── */
   const [dragActive, setDragActive] = useState(false)
@@ -122,7 +128,6 @@ function App() {
                 <PanelBtn label={ro ? 'Lecții' : 'Lessons'} active={showLessons} onClick={toggleLessons} />
               </>
             )}
-            <PanelBtn label="Synth" active={showSynthLab} onClick={toggleSynthLab} />
           </div>
 
           <div className="mx-1 hidden h-4 w-px bg-zinc-800 sm:block" />
@@ -214,13 +219,8 @@ function App() {
             </div>
           )}
 
-          {/* Synth + Effects — single scrollable region */}
+          {/* Effects chain */}
           <div className="flex-1 overflow-y-auto">
-            {showSynthLab && (
-              <div className="border-b border-zinc-800">
-                <SynthLab />
-              </div>
-            )}
             <div className="p-3">
               <EffectsRack />
             </div>

@@ -129,7 +129,7 @@ export async function start(): Promise<void> {
       await readyPromise
 
       // Connect permanently so the worklet renders even without file playback
-      // (synth-only mode, meter updates, etc.). Repeated connect() is a no-op.
+      // (meter updates, etc.). Repeated connect() is a no-op.
       newNode.connect(ctx.destination)
 
       // Parallel tap for oscilloscope — no audio path change.
@@ -211,26 +211,4 @@ export function setGlobalBypass(bypassed: boolean): void {
 
 export function reorderEffects(order: number[]): void {
   postOrThrow({ type: 'reorder', order })
-}
-
-// ─── Synth controls ────────────────────────────────────────────────────────
-
-export function synthCreate(): void {
-  postOrThrow({ type: 'synth_create' })
-}
-
-export function synthDestroy(): void {
-  postOrThrow({ type: 'synth_destroy' })
-}
-
-export function synthNoteOn(midiNote: number, freqHz: number): void {
-  postOrThrow({ type: 'synth_note_on', midiNote, freqHz })
-}
-
-export function synthNoteOff(midiNote: number): void {
-  postOrThrow({ type: 'synth_note_off', midiNote })
-}
-
-export function synthSetParam(paramId: number, value: number): void {
-  postOrThrow({ type: 'synth_set_param', paramId, value })
 }

@@ -6,13 +6,13 @@ interface UiState {
   showVisualizer: boolean
   showEducation:  boolean
   showLessons:    boolean
-  showSynthLab:   boolean
+  theme: 'dark' | 'light'
 
   toggleWaveform:   () => void
   toggleVisualizer: () => void
   toggleEducation:  () => void
   toggleLessons:    () => void
-  toggleSynthLab:   () => void
+  setTheme: (t: 'dark' | 'light') => void
 }
 
 export const useUiStore = create<UiState>()(
@@ -23,13 +23,13 @@ export const useUiStore = create<UiState>()(
         showVisualizer: true,
         showEducation:  true,
         showLessons:    false,
-        showSynthLab:   false,
+        theme:          'dark',
 
         toggleWaveform:   () => set((s) => ({ showWaveform:   !s.showWaveform   }), undefined, 'ui/toggleWaveform'),
         toggleVisualizer: () => set((s) => ({ showVisualizer: !s.showVisualizer }), undefined, 'ui/toggleVisualizer'),
         toggleEducation:  () => set((s) => ({ showEducation:  !s.showEducation  }), undefined, 'ui/toggleEducation'),
         toggleLessons:    () => set((s) => ({ showLessons:    !s.showLessons    }), undefined, 'ui/toggleLessons'),
-        toggleSynthLab:   () => set((s) => ({ showSynthLab:   !s.showSynthLab   }), undefined, 'ui/toggleSynthLab'),
+        setTheme: (t) => set({ theme: t }, undefined, 'ui/setTheme'),
       }),
       {
         name: 'resolab-ui',
@@ -38,7 +38,7 @@ export const useUiStore = create<UiState>()(
           showVisualizer: s.showVisualizer,
           showEducation:  s.showEducation,
           showLessons:    s.showLessons,
-          showSynthLab:   s.showSynthLab,
+          theme:          s.theme,
         }),
       },
     ),

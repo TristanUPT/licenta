@@ -30,12 +30,12 @@ export function SettingsPanel() {
   const showVisualizer    = useUiStore((s) => s.showVisualizer)
   const showEducation     = useUiStore((s) => s.showEducation)
   const showLessons       = useUiStore((s) => s.showLessons)
-  const showSynthLab      = useUiStore((s) => s.showSynthLab)
+  const theme             = useUiStore((s) => s.theme)
   const toggleVisualizer  = useUiStore((s) => s.toggleVisualizer)
   const toggleEducation   = useUiStore((s) => s.toggleEducation)
   const toggleLessons     = useUiStore((s) => s.toggleLessons)
   const toggleWaveform    = useUiStore((s) => s.toggleWaveform)
-  const toggleSynthLab    = useUiStore((s) => s.toggleSynthLab)
+  const setTheme          = useUiStore((s) => s.setTheme)
 
   const ro = language === 'ro'
 
@@ -92,6 +92,35 @@ export function SettingsPanel() {
           </Dialog.Description>
 
           <div className="mt-4 space-y-5">
+
+            {/* ── Theme ── */}
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                {ro ? 'Temă' : 'Theme'}
+              </p>
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="flex w-full items-center justify-between rounded-lg border border-zinc-700 px-3 py-2 text-xs transition hover:border-zinc-600"
+                aria-label={ro ? 'Comută tema' : 'Toggle theme'}
+              >
+                <span className="flex items-center gap-2 text-zinc-300">
+                  <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
+                  <span>{theme === 'dark' ? (ro ? 'Mod întunecat' : 'Dark mode') : (ro ? 'Mod luminos' : 'Light mode')}</span>
+                </span>
+                {/* Animated toggle */}
+                <span
+                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${
+                    theme === 'light' ? 'bg-purple-600' : 'bg-zinc-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 translate-y-0.5 rounded-full bg-white shadow transition-transform duration-200 ${
+                      theme === 'light' ? 'translate-x-4' : 'translate-x-0.5'
+                    }`}
+                  />
+                </span>
+              </button>
+            </div>
 
             {/* ── Language ── */}
             <div>
@@ -150,7 +179,6 @@ export function SettingsPanel() {
                   { label: ro ? 'Vizualizări' : 'Visualizers', active: showVisualizer, toggle: toggleVisualizer },
                   { label: ro ? 'Educație' : 'Education',      active: showEducation,  toggle: toggleEducation },
                   { label: ro ? 'Lecții' : 'Lessons',          active: showLessons,    toggle: toggleLessons },
-                  { label: ro ? 'Synth Lab' : 'Synth Lab',     active: showSynthLab,   toggle: toggleSynthLab },
                 ].map(({ label, active, toggle }) => (
                   <button
                     key={label}
