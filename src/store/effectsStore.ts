@@ -6,6 +6,7 @@ import {
   type EffectType,
 } from '@/types/effects'
 import * as engine from '@/audio/engine'
+import { nextUndoSeq } from '@/store/undoSeq'
 
 const MAX_HISTORY = 30
 
@@ -19,6 +20,8 @@ interface EffectsState {
   /** Undo/redo history of effects snapshots. */
   _history: EffectInstance[][]
   _historyIndex: number
+  /** Global undo sequence for each history entry (parallel to `_history`). */
+  _historySeq: number[]
 
   addEffect: (type: EffectType) => EffectInstance
   removeEffect: (id: number) => void
@@ -32,6 +35,10 @@ interface EffectsState {
   redo: () => void
   canUndo: () => boolean
   canRedo: () => boolean
+  /** Global sequence of the step Ctrl+Z would revert, or null if none. */
+  peekUndoSeq: () => number | null
+  /** Global sequence of the step Ctrl+Y would re-apply, or null if none. */
+  peekRedoSeq: () => number | null
 }
 
 function paramDefaults(type: EffectType): Record<number, number> {
@@ -53,6 +60,7 @@ export const useEffectsStore = create<EffectsState>()(
       globalBypass: false,
       _history: [],
       _historyIndex: -1,
+      _historySeq: [],
 
       addEffect: (type) => {
         const id = get().nextId
@@ -66,8 +74,8 @@ export const useEffectsStore = create<EffectsState>()(
 
         set((s) => {
           const newEffects = [...s.effects, instance]
-          const { history, index } = pushHistory(s._history, s._historyIndex, cloneEffects(newEffects))
-          return { effects: newEffects, nextId: s.nextId + 1, _history: history, _historyIndex: index }
+          const { history, historySeq, index } = pushHistory(s._history, s._historySeq, s._historyIndex, cloneEffects(newEffects))
+          return { effects: newEffects, nextId: s.nextId + 1, _history: history, _historySeq: historySeq, _historyIndex: index }
         }, undefined, 'effects/add')
         return instance
       },
@@ -76,8 +84,8 @@ export const useEffectsStore = create<EffectsState>()(
         engine.removeEffect(id)
         set((s) => {
           const newEffects = s.effects.filter((e) => e.id !== id)
-          const { history, index } = pushHistory(s._history, s._historyIndex, cloneEffects(newEffects))
-          return { effects: newEffects, _history: history, _historyIndex: index }
+          const { history, historySeq, index } = pushHistory(s._history, s._historySeq, s._historyIndex, cloneEffects(newEffects))
+          return { effects: newEffects, _history: history, _historySeq: historySeq, _historyIndex: index }
         }, undefined, 'effects/remove')
       },
 
@@ -94,8 +102,8 @@ export const useEffectsStore = create<EffectsState>()(
         engine.setBypass(id, bypassed)
         set((s) => {
           const newEffects = s.effects.map((e) => (e.id === id ? { ...e, bypassed } : e))
-          const { history, index } = pushHistory(s._history, s._historyIndex, cloneEffects(newEffects))
-          return { effects: newEffects, _history: history, _historyIndex: index }
+          const { history, historySeq, index } = pushHistory(s._history, s._historySeq, s._historyIndex, cloneEffects(newEffects))
+          return { effects: newEffects, _history: history, _historySeq: historySeq, _historyIndex: index }
         }, undefined, 'effects/setBypass')
       },
 
@@ -110,16 +118,16 @@ export const useEffectsStore = create<EffectsState>()(
         effects.splice(toIndex, 0, moved)
         engine.reorderEffects(effects.map((e) => e.id))
         set((s) => {
-          const { history, index } = pushHistory(s._history, s._historyIndex, cloneEffects(effects))
-          return { effects, _history: history, _historyIndex: index }
+          const { history, historySeq, index } = pushHistory(s._history, s._historySeq, s._historyIndex, cloneEffects(effects))
+          return { effects, _history: history, _historySeq: historySeq, _historyIndex: index }
         }, undefined, 'effects/reorder')
       },
 
       clear: () => {
         for (const e of get().effects) engine.removeEffect(e.id)
         set((s) => {
-          const { history, index } = pushHistory(s._history, s._historyIndex, [])
-          return { effects: [], _history: history, _historyIndex: index }
+          const { history, historySeq, index } = pushHistory(s._history, s._historySeq, s._historyIndex, [])
+          return { effects: [], _history: history, _historySeq: historySeq, _historyIndex: index }
         }, undefined, 'effects/clear')
       },
 
@@ -143,6 +151,15 @@ export const useEffectsStore = create<EffectsState>()(
 
       canUndo: () => get()._historyIndex > 0,
       canRedo: () => get()._historyIndex < get()._history.length - 1,
+
+      peekUndoSeq: () => {
+        const { _historyIndex: i, _historySeq: sq } = get()
+        return i > 0 ? sq[i]! : null
+      },
+      peekRedoSeq: () => {
+        const { _historyIndex: i, _history: h, _historySeq: sq } = get()
+        return i < h.length - 1 ? sq[i + 1]! : null
+      },
     }),
     { name: 'effectsStore' },
   ),
@@ -152,13 +169,19 @@ export const useEffectsStore = create<EffectsState>()(
 
 function pushHistory(
   history: EffectInstance[][],
+  historySeq: number[],
   index: number,
   snapshot: EffectInstance[],
-): { history: EffectInstance[][]; index: number } {
+): { history: EffectInstance[][]; historySeq: number[]; index: number } {
   const truncated = history.slice(0, index + 1)
+  const truncatedSeq = historySeq.slice(0, index + 1)
   truncated.push(snapshot)
-  if (truncated.length > MAX_HISTORY) truncated.shift()
-  return { history: truncated, index: truncated.length - 1 }
+  truncatedSeq.push(nextUndoSeq())
+  if (truncated.length > MAX_HISTORY) {
+    truncated.shift()
+    truncatedSeq.shift()
+  }
+  return { history: truncated, historySeq: truncatedSeq, index: truncated.length - 1 }
 }
 
 function _applySnapshot(snapshot: EffectInstance[]) {

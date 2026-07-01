@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import * as Popover from '@radix-ui/react-popover'
 import { useEffectsStore } from '@/store/effectsStore'
 import { usePresetStore } from '@/store/presetStore'
 import { useEducationStore } from '@/store/educationStore'
 import { EFFECT_DEFINITIONS, EffectType, type EffectInstance } from '@/types/effects'
+import { EFFECT_DOCS, pickText } from '@/education/effectDescriptions'
 import { FACTORY_PRESETS, type Preset } from '@/presets/factoryPresets'
 import { getStatus } from '@/audio/engine'
 import { PresetManager } from '@/components/workspace/PresetManager'
@@ -65,9 +67,10 @@ export function EffectsRack() {
   const language        = useEducationStore((s) => s.language)
   const ro = language === 'ro'
 
-  const [tab, setTab]     = useState<Tab>('chain')
-  const [open, setOpen]   = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [tab, setTab]           = useState<Tab>('chain')
+  const [open, setOpen]         = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
+  const [error, setError]       = useState<string | null>(null)
 
   const dragIndexRef       = useRef<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
@@ -94,8 +97,8 @@ export function EffectsRack() {
     try {
       if (getStatus().status !== 'running') {
         setError(ro
-          ? 'Pornește engine-ul mai întâi (încarcă un fișier sau pornește Synth Lab).'
-          : 'Start the engine first (load a file or start Synth Lab).')
+          ? 'Pornește engine-ul mai întâi — încarcă un fișier audio.'
+          : 'Start the engine first — load an audio file.')
         return
       }
       addEffect(type)
@@ -173,6 +176,23 @@ export function EffectsRack() {
                   {globalBypass ? (ro ? 'Original' : 'Original') : (ro ? 'Procesat' : 'Processed')}
                 </button>
               )}
+              {/* Clear chain button */}
+              <button
+                onClick={() => setConfirmClear(true)}
+                disabled={!hasEffects}
+                title={ro ? 'Șterge tot lanțul de efecte' : 'Clear entire effects chain'}
+                aria-label={ro ? 'Șterge tot lanțul de efecte' : 'Clear entire effects chain'}
+                className={`flex items-center justify-center rounded p-1 transition ${
+                  hasEffects
+                    ? 'text-zinc-600 hover:bg-red-500/10 hover:text-red-400'
+                    : 'cursor-not-allowed text-zinc-800'
+                }`}
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+
               {/* Add effect popover */}
               <Popover.Root open={open} onOpenChange={setOpen}>
                 <Popover.Trigger asChild>
@@ -202,7 +222,7 @@ export function EffectsRack() {
                             className="w-full rounded px-3 py-1.5 text-left transition hover:bg-zinc-800"
                           >
                             <div className="text-xs font-medium text-zinc-200">{def.label}</div>
-                            <div className="text-[10px] text-zinc-600">{def.description}</div>
+                            <div className="text-[10px] text-zinc-600">{pickText(EFFECT_DOCS[def.type].summary, language, 'beginner')}</div>
                           </button>
                         </li>
                       ))}
@@ -324,6 +344,41 @@ export function EffectsRack() {
           ))}
         </div>
       )}
+
+      {/* ── Clear chain confirmation dialog ── */}
+      <Dialog.Root open={confirmClear} onOpenChange={setConfirmClear}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-72 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
+            <Dialog.Title className="text-sm font-semibold text-zinc-200">
+              {ro ? 'Ștergi tot lanțul de efecte?' : 'Clear the entire effects chain?'}
+            </Dialog.Title>
+            <Dialog.Description className="mt-1 text-[11px] text-zinc-500">
+              {ro
+                ? `Toate cele ${effects.length} efect${effects.length === 1 ? '' : 'e'} vor fi eliminate. Poți anula cu Ctrl+Z.`
+                : `All ${effects.length} effect${effects.length === 1 ? '' : 's'} will be removed. You can undo with Ctrl+Z.`}
+            </Dialog.Description>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => {
+                  clearEffects()
+                  clearActivePreset(null)
+                  setConfirmClear(false)
+                }}
+                className="flex-1 rounded-lg bg-red-600/80 py-2 text-xs font-semibold text-white transition hover:bg-red-500"
+              >
+                {ro ? 'Confirmă' : 'Confirm'}
+              </button>
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="flex-1 rounded-lg border border-zinc-700 py-2 text-xs text-zinc-400 transition hover:text-zinc-200"
+              >
+                {ro ? 'Anulează' : 'Cancel'}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   )
 }

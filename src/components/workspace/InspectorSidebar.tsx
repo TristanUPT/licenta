@@ -114,7 +114,7 @@ export function InspectorSidebar() {
             </div>
             <button
               onClick={clearClip}
-              title="Click to reset clip indicator"
+              title={language === 'ro' ? 'Click pentru a reseta indicatorul de clip' : 'Click to reset clip indicator'}
               className={`mt-1 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase transition ${
                 clipped ? 'bg-red-500 text-white' : 'bg-zinc-900 text-zinc-700 hover:text-zinc-500'
               }`}

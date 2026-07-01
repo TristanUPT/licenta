@@ -1,73 +1,84 @@
-# React + TypeScript + Vite
+# ResoLab — Mini-DAW Educațional Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicație web pentru învățarea și practica ingineriei de sunet, construită ca proiect de licență.
 
-Currently, two official plugins are available:
+## Ce face
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+ResoLab permite:
+- Încărcarea unui fișier audio (WAV, MP3, OGG, FLAC, M4A) prin drag & drop sau selector
+- Aplicarea unui lanț de efecte audio procesate în timp real (Compressor, Parametric EQ, Gate, Reverb, Delay, Limiter, Saturation, Stereo Width, Gain)
+- Vizualizarea semnalului: formă de undă, analizor de spectru, VU-metre, curbă EQ
+- Strat educațional: tooltipuri bilingve (RO/EN), mod beginner/advanced, lecții interactive cu quiz, recomandări dinamice bazate pe analiza DSP
+- Export WAV stereo
+- Preseturi de fabrică și preseturi personalizate (persisted în IndexedDB)
 
-## React Compiler
+## Stack tehnic
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Strat | Tehnologie |
+|-------|-----------|
+| Frontend | React 18 + TypeScript + Vite |
+| Stilizare | TailwindCSS v4 + Radix UI |
+| State | Zustand |
+| DSP Engine | Rust → WebAssembly (wasm-pack) |
+| Audio bridge | Web Audio API + AudioWorklet |
+| Transport | Tone.js |
+| Waveform | wavesurfer.js v7 |
+| Spectrum | audiomotion-analyzer |
+| Persistență | IndexedDB (idb) + localStorage |
 
-## Expanding the ESLint configuration
+## Instalare și rulare
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```bash
+# Instalare dependențe frontend
+npm install
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Compilare modul DSP Rust → WASM (necesită Rust + wasm-pack)
+npm run build:wasm
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# Server de dezvoltare
+npm run dev
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Build de producție
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Cerințe pentru compilarea WASM
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- [Rust](https://rustup.rs/) (edition 2024)
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/) ≥ 0.14
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cargo install wasm-pack
+cd dsp && wasm-pack build --target web
 ```
+
+## Structura proiectului
+
+```
+src/
+  app/           → Shell aplicație, router
+  audio/         → Engine audio, worklet bridge, transport
+  components/    → Componente React (efecte, vizualizări, workspace, educație)
+  store/         → Magazine Zustand (effects, audio, analysis, education, presets, ui)
+  education/     → Conținut educațional, feedback dinamic, recomandări
+  presets/       → Preseturi fabrică (JSON)
+  types/         → Tipuri TypeScript
+  utils/         → Utilități comune
+dsp/
+  src/effects/   → Implementări efecte DSP în Rust
+  src/analysis/  → FFT, loudness, extragere trăsături
+  src/utils/     → Filtre, envelope, delay lines, math
+public/
+  samples/       → Exemple audio CC0
+  worklets/      → AudioWorklet processor JS
+```
+
+## Teste DSP
+
+```bash
+cd dsp && cargo test
+```
+
+## Deploy
+
+Cloudflare Pages din branch `main`. Fișierul `public/_headers` setează headerele COOP/COEP necesare pentru `SharedArrayBuffer`.

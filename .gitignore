@@ -33,3 +33,14 @@ coverage/
 
 # WASM build artifacts
 *.d.ts.map
+
+# Unelte de lucru locale (nu fac parte din codul proiectului)
+CLAUDE.md
+.claude/
+MEMORY.md
+.docgen/
+
+# Documentatie si fisiere Office
+*.docx
+*.xlsx
+*.pptx

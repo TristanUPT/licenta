@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAnalysisStore } from '@/store/analysisStore'
+import { useEducationStore } from '@/store/educationStore'
 
 interface LevelMeterProps {
   /** Total height in px (component is vertical). */
@@ -27,8 +28,8 @@ function dbToY(db: number, minDb: number, height: number): number {
 export function LevelMeter({ height = 160, width = 28, minDb = -60 }: LevelMeterProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number | null>(null)
-  // Smoothed peak/rms in dB for visual decay (avoid jittery bars).
   const stateRef = useRef({ peakDb: -120, rmsDb: -120, holdDb: -120 })
+  const ro = useEducationStore((s) => s.language) === 'ro'
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -113,7 +114,7 @@ export function LevelMeter({ height = 160, width = 28, minDb = -60 }: LevelMeter
       ref={canvasRef}
       className="rounded-md border border-zinc-800"
       aria-label="Output level meter"
-      title="Level meter: cyan = peak · purple = RMS · white = peak hold"
+      title={ro ? 'Contor nivel: cyan = peak · violet = RMS · alb = peak hold' : 'Level meter: cyan = peak · purple = RMS · white = peak hold'}
     />
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { useEducationStore } from '@/store/educationStore'
 import { useEffectsStore } from '@/store/effectsStore'
 import { usePresetStore } from '@/store/presetStore'
@@ -491,7 +492,8 @@ export function LessonsPanel() {
   const setBypass         = useEffectsStore((s) => s.setBypass)
   const clearChain        = useEffectsStore((s) => s.clear)
   const setActivePreset   = usePresetStore((s) => s.setActivePresetId)
-  const [active, setActive] = useState(0)
+  const [active, setActive]     = useState(0)
+  const [expanded, setExpanded] = useState(false)
   const [presetError, setPresetError] = useState<string | null>(null)
   // Quiz state: reset whenever the active lesson changes
   const [quizAnswers, setQuizAnswers] = useState<(number | null)[]>([])
@@ -521,8 +523,8 @@ export function LessonsPanel() {
     : `${doneCount} of ${LESSONS.length} completed`
   const tryLabel    = ro ? 'Încarcă preset exemplu' : 'Load example preset'
   const tryErrorMsg = ro
-    ? 'Pornește engine-ul mai întâi (drag un fișier audio sau Synth Lab).'
-    : 'Start the engine first (drag an audio file or use Synth Lab).'
+    ? 'Pornește engine-ul mai întâi — încarcă un fișier audio.'
+    : 'Start the engine first — load an audio file.'
 
   function handleLoadPreset() {
     if (!lesson.presetId) return
@@ -546,11 +548,23 @@ export function LessonsPanel() {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
           {titleLabel}
         </h2>
-        <span className="text-[10px] text-zinc-500">{progressLabel}</span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-[10px] text-zinc-500">{progressLabel}</span>
+          <button
+            onClick={() => setExpanded(true)}
+            title={ro ? 'Extinde panoul lecții' : 'Expand lessons panel'}
+            aria-label={ro ? 'Extinde lecțiile' : 'Expand lessons'}
+            className="rounded p-0.5 text-zinc-600 transition hover:bg-zinc-800 hover:text-zinc-300"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -584,10 +598,10 @@ export function LessonsPanel() {
 
       {/* Lesson content */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{lesson.icon}</span>
-            <h3 className="text-base font-semibold text-zinc-100">
+        <div className="space-y-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-xl">{lesson.icon}</span>
+            <h3 className="min-w-0 truncate text-sm font-semibold text-zinc-100" title={lesson.title[language]}>
               {lesson.title[language]}
             </h3>
           </div>
@@ -595,7 +609,7 @@ export function LessonsPanel() {
             <button
               onClick={handleLoadPreset}
               title={tryLabel}
-              className="shrink-0 rounded-md border border-purple-500/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-purple-400 transition hover:border-purple-500/60 hover:bg-purple-500/10 hover:text-purple-300"
+              className="w-full rounded-md border border-purple-500/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-purple-400 transition hover:border-purple-500/60 hover:bg-purple-500/10 hover:text-purple-300"
             >
               {tryLabel}
             </button>
@@ -644,6 +658,134 @@ export function LessonsPanel() {
           />
         )}
       </div>
+
+      {/* ── Expanded overlay ── */}
+      <Dialog.Root open={expanded} onOpenChange={setExpanded}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+          <Dialog.Content
+            className="fixed left-1/2 top-1/2 z-50 flex w-[min(90vw,880px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl"
+            style={{ maxHeight: '88vh' }}
+          >
+            <Dialog.Title className="sr-only">
+              {ro ? 'Lecții de audio — panou extins' : 'Audio lessons — expanded panel'}
+            </Dialog.Title>
+            <Dialog.Description className="sr-only">{progressLabel}</Dialog.Description>
+
+            {/* Header */}
+            <div className="shrink-0 border-b border-zinc-800 px-5 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">
+                  {titleLabel}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-zinc-500">{progressLabel}</span>
+                  <Dialog.Close asChild>
+                    <button
+                      className="rounded p-0.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+                      aria-label={ro ? 'Închide' : 'Close'}
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </Dialog.Close>
+                </div>
+              </div>
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-purple-500 transition-all duration-500"
+                  style={{ width: `${(doneCount / LESSONS.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Two-panel body */}
+            <div className="flex min-h-0 flex-1">
+
+              {/* Lesson list */}
+              <nav className="w-56 shrink-0 overflow-y-auto border-r border-zinc-800 py-1" style={{ scrollbarWidth: 'thin' }}>
+                {LESSONS.map((l, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActive(i)}
+                    className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[12px] transition ${
+                      active === i
+                        ? 'bg-purple-600/20 text-purple-200'
+                        : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200'
+                    }`}
+                  >
+                    <span className="shrink-0 text-base leading-none">{l.icon}</span>
+                    <span className="flex-1 leading-snug">{l.title[language]}</span>
+                    {completedLessons.includes(i) && (
+                      <span className="shrink-0 text-[10px] text-emerald-400">✓</span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+
+              {/* Lesson content */}
+              <div className="min-h-0 flex-1 overflow-y-auto p-6" style={{ scrollbarWidth: 'thin' }}>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{lesson.icon}</span>
+                      <h3 className="text-xl font-semibold text-zinc-100">{lesson.title[language]}</h3>
+                    </div>
+                    {lesson.presetId && (
+                      <button
+                        onClick={() => { handleLoadPreset(); setExpanded(false) }}
+                        title={tryLabel}
+                        className="shrink-0 rounded-md border border-purple-500/30 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-purple-400 transition hover:border-purple-500/60 hover:bg-purple-500/10 hover:text-purple-300"
+                      >
+                        {tryLabel}
+                      </button>
+                    )}
+                  </div>
+                  {presetError && (
+                    <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-300">
+                      {presetError}
+                    </p>
+                  )}
+                  <p className="text-sm leading-relaxed text-zinc-400">
+                    {lesson.body[language][mode]}
+                  </p>
+                  <div className="rounded-lg bg-zinc-800/60 p-4">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                      {pointsLabel}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {lesson.keyPoints[language].map((point, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-zinc-300">
+                          <span className="mt-0.5 shrink-0 text-purple-400">▸</span>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {lesson.quiz && lesson.quiz.length > 0 && (
+                    <QuizBlock
+                      quiz={lesson.quiz}
+                      language={language}
+                      answers={quizAnswers}
+                      submitted={quizSubmitted}
+                      onAnswer={(qi, oi) => {
+                        if (quizSubmitted) return
+                        setQuizAnswers((prev) => { const next = [...prev]; next[qi] = oi; return next })
+                      }}
+                      onSubmit={() => setQuizSubmitted(true)}
+                      onRetry={() => {
+                        setQuizAnswers(new Array(lesson.quiz!.length).fill(null))
+                        setQuizSubmitted(false)
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </section>
   )
 }

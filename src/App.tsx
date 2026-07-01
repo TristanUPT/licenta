@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Switch from '@radix-ui/react-switch'
+import * as Dialog from '@radix-ui/react-dialog'
 import { getStatus, subscribe, type EngineStatus } from '@/audio/engine'
 import { start as startEngine, getContext } from '@/audio/engine'
 import { useAudioStore } from '@/store/audioStore'
@@ -16,6 +17,7 @@ import { TransportBar } from '@/components/workspace/TransportBar'
 import { WaveformView } from '@/components/visualization/WaveformView'
 import { EffectsRack } from '@/components/workspace/EffectsRack'
 import { decodeFile } from '@/audio/file-loader'
+import * as transport from '@/audio/transport'
 
 const STATUS_DOT: Record<EngineStatus, string> = {
   idle: 'bg-zinc-600',
@@ -47,10 +49,12 @@ function App() {
   const loadUserPresets = usePresetStore((s) => s.loadUserPresetsFromDB)
   useEffect(() => { void loadUserPresets() }, [loadUserPresets])
 
-  const currentFile = useAudioStore((s) => s.currentFile)
-  const setFile     = useAudioStore((s) => s.setFile)
-  const setLoading  = useAudioStore((s) => s.setLoading)
-  const setError    = useAudioStore((s) => s.setError)
+  const currentFile  = useAudioStore((s) => s.currentFile)
+  const setFile      = useAudioStore((s) => s.setFile)
+  const clearFile    = useAudioStore((s) => s.clearFile)
+  const setLoading   = useAudioStore((s) => s.setLoading)
+  const setError     = useAudioStore((s) => s.setError)
+  const audioError   = useAudioStore((s) => s.error)
   const mode        = useEducationStore((s) => s.mode)
   const language    = useEducationStore((s) => s.language)
   const setMode     = useEducationStore((s) => s.setMode)
@@ -74,9 +78,10 @@ function App() {
     }
   }, [theme])
 
-  /* ── Central drop zone (when no file loaded) ── */
-  const [dragActive, setDragActive] = useState(false)
-  const centerRef = useRef<HTMLDivElement>(null)
+  /* ── Central drop zone ── */
+  const [dragActive, setDragActive]         = useState(false)
+  const [pendingDropFile, setPendingDropFile] = useState<File | null>(null)
+  const centerRef    = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleDroppedFile(file: File) {
@@ -100,7 +105,17 @@ function App() {
   async function onDrop(e: React.DragEvent) {
     e.preventDefault(); setDragActive(false)
     const file = e.dataTransfer.files[0]
-    if (file) await handleDroppedFile(file)
+    if (!file) return
+    const { currentFile: cf, isRecording: rec } = useAudioStore.getState()
+    if (rec) {
+      setError(language === 'ro' ? 'Înregistrare activă — oprește înregistrarea mai întâi.' : 'Recording in progress — stop recording first.')
+      return
+    }
+    if (cf) {
+      setPendingDropFile(file)
+      return
+    }
+    await handleDroppedFile(file)
   }
 
   const ro = language === 'ro'
@@ -117,9 +132,9 @@ function App() {
           <span className="hidden text-[10px] text-zinc-600 sm:inline">Mini-DAW Educațional</span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 shrink items-center gap-1.5">
           {/* Panel toggles */}
-          <div className="hidden items-center divide-x divide-zinc-800 rounded border border-zinc-800 sm:flex">
+          <div className="hidden shrink-0 items-center divide-x divide-zinc-800 rounded border border-zinc-800 sm:flex">
             {currentFile && (
               <>
                 <PanelBtn label="Wave"                  active={showWaveform}   onClick={toggleWaveform} />
@@ -148,7 +163,7 @@ function App() {
           </div>
 
           {/* Language */}
-          <div className="flex items-center divide-x divide-zinc-800 rounded border border-zinc-800">
+          <div className="flex shrink-0 items-center divide-x divide-zinc-800 rounded border border-zinc-800">
             <button onClick={() => setLanguage('ro')} className={`px-2 py-0.5 text-[10px] font-semibold uppercase transition ${language === 'ro' ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}>RO</button>
             <button onClick={() => setLanguage('en')} className={`px-2 py-0.5 text-[10px] font-semibold uppercase transition ${language === 'en' ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}>EN</button>
           </div>
@@ -216,6 +231,11 @@ function App() {
                   : (ro ? 'Click sau trage un fișier audio aici' : 'Click or drop an audio file here')}
               </p>
               <p className="mt-0.5 text-[10px] text-zinc-700">WAV · MP3 · OGG · FLAC · M4A · AAC</p>
+              {audioError && (
+                <p className="mt-3 rounded-md border border-red-800/50 bg-red-900/20 px-3 py-1.5 text-[11px] text-red-300">
+                  {audioError}
+                </p>
+              )}
             </div>
           )}
 
@@ -238,6 +258,46 @@ function App() {
 
       <OnboardingTutorial />
       <KeyboardHint />
+
+      {/* ── Drag & drop replace confirmation ── */}
+      <Dialog.Root open={pendingDropFile !== null} onOpenChange={(o) => { if (!o) setPendingDropFile(null) }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-72 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-zinc-800 bg-zinc-900 p-5 shadow-2xl">
+            <Dialog.Title className="text-sm font-semibold text-zinc-200">
+              {ro ? 'Înlocuiești fișierul curent?' : 'Replace current file?'}
+            </Dialog.Title>
+            <Dialog.Description className="mt-1 text-[11px] text-zinc-500">
+              {ro ? 'Fișierul curent va fi scos din memorie.' : 'The current file will be unloaded from memory.'}
+            </Dialog.Description>
+            {pendingDropFile && (
+              <p className="mt-2 truncate rounded bg-zinc-800 px-2 py-1 text-[11px] text-zinc-400">{pendingDropFile.name}</p>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={async () => {
+                  const f = pendingDropFile
+                  setPendingDropFile(null)
+                  if (f) {
+                    transport.stop()
+                    clearFile()
+                    await handleDroppedFile(f)
+                  }
+                }}
+                className="flex-1 rounded-lg bg-purple-600 py-2 text-xs font-semibold text-white transition hover:bg-purple-500"
+              >
+                {ro ? 'Înlocuiește' : 'Replace'}
+              </button>
+              <button
+                onClick={() => setPendingDropFile(null)}
+                className="flex-1 rounded-lg border border-zinc-700 py-2 text-xs text-zinc-400 transition hover:text-zinc-200"
+              >
+                {ro ? 'Anulează' : 'Cancel'}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   )
 }

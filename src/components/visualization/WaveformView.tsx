@@ -6,6 +6,7 @@ import { useAudioStore } from '@/store/audioStore'
 import { useEducationStore } from '@/store/educationStore'
 import { useUiStore } from '@/store/uiStore'
 import * as transport from '@/audio/transport'
+import { cropToRegion, deleteRegion } from '@/audio/chop'
 
 const LOOP_REGION_ID = 'loop'
 
@@ -24,11 +25,14 @@ export function WaveformView() {
   const loopRegionRef = useRef<Region | null>(null)
 
   const audioBuffer = useAudioStore((s) => s.audioBuffer)
+  const originalBuffer = useAudioStore((s) => s.originalBuffer)
   const playbackPosition = useAudioStore((s) => s.playbackPosition)
   const isLooping = useAudioStore((s) => s.isLooping)
   const isPlaying = useAudioStore((s) => s.isPlaying)
   const setLoopRegion = useAudioStore((s) => s.setLoopRegion)
   const setPlaying = useAudioStore((s) => s.setPlaying)
+  const applyBufferEdit = useAudioStore((s) => s.applyBufferEdit)
+  const revertToOriginal = useAudioStore((s) => s.revertToOriginal)
   const loopStart = useAudioStore((s) => s.loopStart)
   const loopEnd = useAudioStore((s) => s.loopEnd)
   const language = useEducationStore((s) => s.language)
@@ -36,6 +40,19 @@ export function WaveformView() {
 
   const duration = audioBuffer?.duration ?? 0
   const hasRegion = loopStart !== 0 || loopEnd !== duration
+  const isEdited = audioBuffer !== null && originalBuffer !== null && audioBuffer !== originalBuffer
+
+  function handleCrop() {
+    if (!audioBuffer) return
+    const out = cropToRegion(audioBuffer, loopStart, loopEnd)
+    if (out) applyBufferEdit(out)
+  }
+
+  function handleDelete() {
+    if (!audioBuffer) return
+    const out = deleteRegion(audioBuffer, loopStart, loopEnd)
+    if (out) applyBufferEdit(out)
+  }
 
   function handleSetIn() {
     setLoopRegion(playbackPosition, Math.max(playbackPosition + 0.1, loopEnd))
@@ -177,6 +194,9 @@ export function WaveformView() {
   const setInLabel  = language === 'ro' ? 'Set In'  : 'Set In'
   const setOutLabel = language === 'ro' ? 'Set Out' : 'Set Out'
   const clearLabel  = language === 'ro' ? 'Șterge'  : 'Clear'
+  const cropLabel   = language === 'ro' ? 'Păstrează selecția' : 'Keep selection'
+  const deleteLabel = language === 'ro' ? 'Șterge selecția'    : 'Delete selection'
+  const revertLabel = language === 'ro' ? 'Revenire la original' : 'Revert to original'
 
   return (
     <div className="bg-zinc-900 px-3 pb-2 pt-1">
@@ -226,6 +246,45 @@ export function WaveformView() {
           )}
         </div>
       </div>
+
+      {/* Chop actions — non-destructive, undoable with Ctrl+Z */}
+      {(hasRegion || isEdited) && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {hasRegion && (
+            <>
+              <button
+                onClick={handleCrop}
+                title={language === 'ro'
+                  ? 'Taie tot ce este în afara selecției, păstrând doar regiunea'
+                  : 'Trim everything outside the selection, keeping only the region'}
+                className="rounded bg-purple-600/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-purple-300 transition hover:bg-purple-600/40"
+              >
+                {cropLabel}
+              </button>
+              <button
+                onClick={handleDelete}
+                title={language === 'ro'
+                  ? 'Elimină regiunea selectată și unește restul'
+                  : 'Remove the selected region and join the rest'}
+                className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition hover:bg-red-500/20 hover:text-red-400"
+              >
+                {deleteLabel}
+              </button>
+            </>
+          )}
+          {isEdited && (
+            <button
+              onClick={revertToOriginal}
+              title={language === 'ro'
+                ? 'Readu fișierul audio complet, nemodificat'
+                : 'Bring back the full, unmodified audio'}
+              className="ml-auto rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 transition hover:bg-zinc-700 hover:text-zinc-200"
+            >
+              {revertLabel}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

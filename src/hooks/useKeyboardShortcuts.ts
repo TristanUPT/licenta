@@ -5,6 +5,40 @@ import * as transport from '@/audio/transport'
 import { usePresetStore } from '@/store/presetStore'
 
 /**
+ * Undo/redo spans two independent histories — the effects chain and the audio
+ * buffer edits (chop). Each undoable step carries a global sequence number, so a
+ * single Ctrl+Z can respect true chronological order: undo reverts whichever
+ * domain holds the most recent step, redo re-applies the earliest undone one.
+ */
+function globalUndo() {
+  const effects = useEffectsStore.getState()
+  const audio = useAudioStore.getState()
+  const eSeq = effects.peekUndoSeq()
+  const bSeq = audio.peekBufferUndoSeq()
+  if (eSeq === null && bSeq === null) return
+  if (bSeq !== null && (eSeq === null || bSeq > eSeq)) {
+    audio.undoBuffer()
+  } else {
+    effects.undo()
+    usePresetStore.getState().setActivePresetId(null)
+  }
+}
+
+function globalRedo() {
+  const effects = useEffectsStore.getState()
+  const audio = useAudioStore.getState()
+  const eSeq = effects.peekRedoSeq()
+  const bSeq = audio.peekBufferRedoSeq()
+  if (eSeq === null && bSeq === null) return
+  if (bSeq !== null && (eSeq === null || bSeq < eSeq)) {
+    audio.redoBuffer()
+  } else {
+    effects.redo()
+    usePresetStore.getState().setActivePresetId(null)
+  }
+}
+
+/**
  * Global keyboard shortcuts.
  *
  * Space       — play / pause
@@ -91,18 +125,8 @@ export function useKeyboardShortcuts() {
         case 'KeyZ': {
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault()
-            const store = useEffectsStore.getState()
-            if (e.shiftKey) {
-              if (store.canRedo()) {
-                store.redo()
-                usePresetStore.getState().setActivePresetId(null)
-              }
-            } else {
-              if (store.canUndo()) {
-                store.undo()
-                usePresetStore.getState().setActivePresetId(null)
-              }
-            }
+            if (e.shiftKey) globalRedo()
+            else globalUndo()
           }
           break
         }
@@ -110,11 +134,7 @@ export function useKeyboardShortcuts() {
         case 'KeyY': {
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault()
-            const store = useEffectsStore.getState()
-            if (store.canRedo()) {
-              store.redo()
-              usePresetStore.getState().setActivePresetId(null)
-            }
+            globalRedo()
           }
           break
         }

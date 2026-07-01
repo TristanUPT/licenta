@@ -11,7 +11,7 @@ const ONBOARDING_KEY = 'resolab-onboarding-done'
 
 export function SettingsPanel() {
   const [open, setOpen] = useState(false)
-  const [confirmClear, setConfirmClear] = useState<'presets' | 'chain' | null>(null)
+  const [confirmClear, setConfirmClear] = useState<'presets' | null>(null)
 
   const language    = useEducationStore((s) => s.language)
   const mode        = useEducationStore((s) => s.mode)
@@ -41,12 +41,6 @@ export function SettingsPanel() {
 
   async function handleClearPresets() {
     for (const p of userPresets) await deleteUserPreset(p.id)
-    setActivePreset(null)
-    setConfirmClear(null)
-  }
-
-  function handleClearChain() {
-    clearChain()
     setActivePreset(null)
     setConfirmClear(null)
   }
@@ -206,25 +200,6 @@ export function SettingsPanel() {
                 >
                   {ro ? 'Reafișează tutorialul de onboarding' : 'Replay the onboarding tutorial'}
                 </button>
-
-                {/* Clear chain */}
-                {confirmClear === 'chain' ? (
-                  <div className="flex gap-1.5">
-                    <button onClick={handleClearChain} className="flex-1 rounded-md bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500">
-                      {ro ? 'Confirmă' : 'Confirm'}
-                    </button>
-                    <button onClick={() => setConfirmClear(null)} className="flex-1 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200">
-                      {ro ? 'Anulează' : 'Cancel'}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmClear('chain')}
-                    className="w-full rounded-md border border-zinc-700 px-3 py-1.5 text-left text-xs text-zinc-400 transition hover:border-red-500/50 hover:text-red-400"
-                  >
-                    {ro ? 'Șterge lanțul de efecte curent' : 'Clear the current effects chain'}
-                  </button>
-                )}
 
                 {/* Clear user presets */}
                 {userPresets.length > 0 && (

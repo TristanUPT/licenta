@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useAudioStore } from '@/store/audioStore'
 import { useAnalysisStore } from '@/store/analysisStore'
 import { useEffectsStore } from '@/store/effectsStore'
+import { useEducationStore } from '@/store/educationStore'
 import * as transport from '@/audio/transport'
 import * as metronome from '@/audio/metronome'
 import { renderAndDownload } from '@/audio/export'
@@ -30,6 +31,8 @@ export function TransportBar() {
   const toggleLoop = useAudioStore((s) => s.toggleLoop)
   const clearFile = useAudioStore((s) => s.clearFile)
   const setPlaybackPosition = useAudioStore((s) => s.setPlaybackPosition)
+  const language = useEducationStore((s) => s.language)
+  const ro = language === 'ro'
 
   useEffect(() => {
     const off1 = transport.onEnded(() => setPlaying(false))
@@ -88,14 +91,14 @@ export function TransportBar() {
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 sm:px-4 sm:py-3">
+    <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 sm:px-4 sm:py-3" style={{ scrollbarWidth: 'thin' }}>
       {/* Row 1: meter + transport controls + time */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        <div className="flex flex-col items-center gap-1">
+      <div className="flex min-w-max items-center gap-2 sm:gap-4">
+        <div className="flex shrink-0 flex-col items-center gap-1">
           <LevelMeter height={40} width={16} />
           <button
             onClick={clearClip}
-            title="Click to reset clip indicator"
+            title={ro ? 'Click pentru a reseta indicatorul de clip' : 'Click to reset clip indicator'}
             className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase transition ${
               clipped
                 ? 'bg-red-500 text-white hover:bg-red-400'
@@ -105,11 +108,11 @@ export function TransportBar() {
             CLIP
           </button>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
             onClick={handlePlayPause}
             disabled={!audioBuffer}
-            aria-label={isPlaying ? 'Pause' : 'Play'}
+            aria-label={isPlaying ? (ro ? 'Pauză' : 'Pause') : (ro ? 'Redare' : 'Play')}
             className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-600 text-white transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-30 sm:h-10 sm:w-10"
           >
             {isPlaying ? (
@@ -121,7 +124,7 @@ export function TransportBar() {
           <button
             onClick={handleStop}
             disabled={!audioBuffer}
-            aria-label="Stop"
+            aria-label={ro ? 'Oprire' : 'Stop'}
             className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-30 sm:h-10 sm:w-10"
           >
             <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
@@ -129,7 +132,7 @@ export function TransportBar() {
           <button
             onClick={toggleLoop}
             disabled={!audioBuffer}
-            aria-label="Loop"
+            aria-label={ro ? 'Buclă' : 'Loop'}
             aria-pressed={isLooping}
             className={`flex h-9 w-9 items-center justify-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-30 sm:h-10 sm:w-10 ${
               isLooping ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
@@ -181,7 +184,7 @@ export function TransportBar() {
             <button
               onClick={() => { transport.stop(); clearFile() }}
               className="text-xs text-zinc-500 transition hover:text-zinc-200"
-              aria-label="Remove file"
+              aria-label={ro ? 'Elimină fișierul' : 'Remove file'}
             >✕</button>
           </div>
         )}
@@ -189,7 +192,7 @@ export function TransportBar() {
 
       {/* Row 2 (mobile only): filename + LUFS + export */}
       {currentFile && (
-        <div className="mt-2 flex items-center gap-2 sm:hidden">
+        <div className="mt-2 flex min-w-max items-center gap-2 sm:hidden">
           <FileInfo currentFile={currentFile} />
           {integratedLufs !== null && (
             <span className={`shrink-0 font-mono text-[10px] tabular-nums ${integratedLufs > -14 ? 'text-amber-300' : integratedLufs > -23 ? 'text-emerald-400' : 'text-zinc-500'}`}>
@@ -228,6 +231,7 @@ function MetronomeGroup() {
   const inputRef = useRef<HTMLInputElement>(null)
   const holdRef = useRef<number | null>(null)
   const beatTimeoutRef = useRef<number | null>(null)
+  const ro = useEducationStore((s) => s.language) === 'ro'
 
   useEffect(() => {
     const off = metronome.onBeat(() => {
@@ -299,7 +303,7 @@ function MetronomeGroup() {
   }
 
   return (
-    <div className="hidden items-center gap-1 sm:flex">
+    <div className="hidden shrink-0 items-center gap-1 sm:flex">
       {/* BPM control */}
       <div className="flex h-9 items-center overflow-hidden rounded-lg border border-zinc-700 sm:h-10">
         {/* Minus */}
@@ -308,7 +312,7 @@ function MetronomeGroup() {
           onPointerUp={stopHold}
           onPointerLeave={stopHold}
           className="flex h-full w-7 items-center justify-center text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-700"
-          aria-label="Decrease BPM"
+          aria-label={ro ? 'Scade BPM' : 'Decrease BPM'}
         >
           <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
         </button>
@@ -352,7 +356,7 @@ function MetronomeGroup() {
           onPointerUp={stopHold}
           onPointerLeave={stopHold}
           className="flex h-full w-7 items-center justify-center text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200 active:bg-zinc-700"
-          aria-label="Increase BPM"
+          aria-label={ro ? 'Crește BPM' : 'Increase BPM'}
         >
           <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
         </button>
@@ -361,7 +365,7 @@ function MetronomeGroup() {
       {/* Metronome button */}
       <button
         onClick={handleToggleMetronome}
-        title={active ? 'Stop metronome' : 'Start metronome'}
+        title={active ? (ro ? 'Oprește metronomul' : 'Stop metronome') : (ro ? 'Pornește metronomul' : 'Start metronome')}
         aria-pressed={active}
         className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
           active
@@ -431,6 +435,7 @@ function RecordingControls() {
     startRecording, stopRecording, clearRecording,
   } = useRecording()
   const [devOpen, setDevOpen] = useState(false)
+  const ro = useEducationStore((s) => s.language) === 'ro'
 
   async function handleMicClick() {
     if (micActive && !devOpen) {
@@ -451,12 +456,12 @@ function RecordingControls() {
   }
 
   return (
-    <div className="flex items-center gap-1 sm:gap-1.5">
+    <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
       {/* Mic / device selector */}
       <div className="relative">
         <button
           onClick={() => void handleMicClick()}
-          title={micError ?? (micActive ? 'Audio input settings' : 'Select audio input')}
+          title={micError ?? (micActive ? (ro ? 'Setări intrare audio' : 'Audio input settings') : (ro ? 'Selectează intrarea audio' : 'Select audio input'))}
           className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
             micError
               ? 'bg-red-900 text-red-400 hover:bg-red-800'
@@ -474,7 +479,7 @@ function RecordingControls() {
             <div className="absolute bottom-full left-0 z-50 mb-2 w-64 rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
               <div className="border-b border-zinc-800 px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-                  Audio Input
+                  {ro ? 'Intrare audio' : 'Audio Input'}
                 </p>
               </div>
 
@@ -490,7 +495,7 @@ function RecordingControls() {
                     onClick={() => void enumerateDevices()}
                     className="w-full rounded px-3 py-2 text-left text-[11px] text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
                   >
-                    Scan for devices…
+                    {ro ? 'Scanează dispozitive…' : 'Scan for devices…'}
                   </button>
                 ) : (
                   audioDevices.map((d) => (
@@ -526,11 +531,13 @@ function RecordingControls() {
                     <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 12h.01" />
                     </svg>
-                    {monitoring ? 'Monitoring active' : 'Monitor (direct listen)'}
+                    {monitoring
+                      ? (ro ? 'Monitorizare activă' : 'Monitoring active')
+                      : (ro ? 'Monitor (ascultare directă)' : 'Monitor (direct listen)')}
                   </button>
                   {monitoring && (
                     <p className="px-3 text-[10px] text-amber-500">
-                      ⚠ Use headphones to avoid feedback
+                      {ro ? '⚠ Folosește căști pentru a evita feedback-ul' : '⚠ Use headphones to avoid feedback'}
                     </p>
                   )}
                   <button
@@ -540,7 +547,7 @@ function RecordingControls() {
                     <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    Disconnect input
+                    {ro ? 'Deconectează intrarea' : 'Disconnect input'}
                   </button>
                 </div>
               )}
@@ -552,7 +559,7 @@ function RecordingControls() {
       {/* Record / Stop record */}
       <button
         onClick={isRecording ? stopRecording : startRecording}
-        title={isRecording ? 'Stop recording' : 'Start recording'}
+        title={isRecording ? (ro ? 'Oprește înregistrarea' : 'Stop recording') : (ro ? 'Începe înregistrarea' : 'Start recording')}
         className={`flex h-9 w-9 items-center justify-center rounded-lg transition sm:h-10 sm:w-10 ${
           isRecording
             ? 'bg-red-600 text-white hover:bg-red-500'
@@ -584,7 +591,7 @@ function RecordingControls() {
           <a
             href={recordingUrl}
             download="recording.wav"
-            title="Download recording (WAV)"
+            title={ro ? 'Descarcă înregistrarea (WAV)' : 'Download recording (WAV)'}
             className="hidden h-9 items-center gap-1 rounded-lg bg-zinc-800 px-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-300 transition hover:bg-zinc-700 hover:text-white sm:flex sm:h-10"
           >
             <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -594,7 +601,7 @@ function RecordingControls() {
           </a>
           <button
             onClick={clearRecording}
-            title="Discard recording"
+            title={ro ? 'Șterge înregistrarea' : 'Discard recording'}
             className="text-xs text-zinc-600 transition hover:text-zinc-300"
           >✕</button>
         </>
@@ -628,11 +635,16 @@ function FileInfo({ currentFile }: { currentFile: { name: string; sampleRate: nu
 }
 
 function ExportButton({ exporting, disabled, onExport }: { exporting: boolean; disabled: boolean; onExport: () => void }) {
+  const ro = useEducationStore((s) => s.language) === 'ro'
   return (
     <button
       onClick={onExport}
       disabled={exporting || disabled}
-      title={disabled ? 'Add effects before exporting' : 'Export processed audio as WAV'}
+      title={
+        disabled
+          ? (ro ? 'Adaugă efecte înainte de export' : 'Add effects before exporting')
+          : (ro ? 'Exportă audio procesat ca WAV' : 'Export processed audio as WAV')
+      }
       className="flex shrink-0 items-center gap-1.5 rounded-md bg-zinc-800 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {exporting ? (
@@ -641,7 +653,7 @@ function ExportButton({ exporting, disabled, onExport }: { exporting: boolean; d
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          Exporting…
+          {ro ? 'Export…' : 'Exporting…'}
         </>
       ) : (
         <>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getContext, getNode, start as startEngine } from '@/audio/engine'
 import { encodeWav } from '@/audio/wav-encoder'
+import { useAudioStore } from '@/store/audioStore'
 
 export function useRecording() {
   const [micActive, setMicActive] = useState(false)
@@ -181,12 +182,14 @@ export function useRecording() {
           setRecordingUrl(urlRef.current)
         }
         setIsRecording(false)
+        useAudioStore.getState().setIsRecording(false)
       })()
     }
 
     recorder.start(100)
     recorderRef.current = recorder
     setIsRecording(true)
+    useAudioStore.getState().setIsRecording(true)
     setRecordingSec(0)
     timerRef.current = window.setInterval(() => {
       setRecordingSec((s) => s + 1)

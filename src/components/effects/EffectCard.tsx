@@ -48,7 +48,7 @@ export function EffectCard({ instance, children }: EffectCardProps) {
         <span
           data-drag-handle
           className="cursor-grab select-none text-sm leading-none text-zinc-700 hover:text-zinc-500"
-          title="Drag to reorder"
+          title={language === 'ro' ? 'Trage pentru reordonare' : 'Drag to reorder'}
           aria-hidden
         >
           ⠿
@@ -81,7 +81,7 @@ export function EffectCard({ instance, children }: EffectCardProps) {
       </div>
 
       {/* Controls */}
-      <div className="flex flex-wrap items-start gap-4 border-t border-zinc-800/50 px-3 pb-2.5 pt-2">
+      <div className="flex min-w-0 flex-wrap items-start gap-4 border-t border-zinc-800/50 px-3 pb-2.5 pt-2">
         {children}
       </div>
     </div>
